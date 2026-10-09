@@ -29,8 +29,10 @@ Change the repository list later under **Configure** for Aibysitter: personal ac
 
 Under `advisory` (the default), every review completes as `success` (no findings) or `neutral` (findings). Under `fail-on-warnings` or `fail-on-errors`, a blocking finding completes it as `failure`.
 
+A review that stops on an error completes as **Review failed**: `failure` under `fail-on-warnings` and `fail-on-errors`, `neutral` under `advisory`. A review the server drops (queue full, interrupted 3 times) completes as `neutral`.
+
 - The check is named **Aibysitter review**, in the pull request's **Checks** tab. GitHub lists it as **Aibysitter / Aibysitter review**.
-- The summary has one row per check with its finding count, then notes and config errors.
+- The summary has one row per check with its finding count, then notes and config errors. Files not read are listed in the notes.
 - Each finding is an annotation on the changed line, in **Files changed**. Findings on removed files are listed in the summary.
 
 Checks: [aibysitting.net/Rules](https://aibysitting.net/Rules). What the App reads and keeps: [aibysitting.net/Privacy](https://aibysitting.net/Privacy).
@@ -57,7 +59,7 @@ Optional. Path: `.github/aibysitter.json`. The App reads it from the base branch
 | Key | Value | Default |
 |---|---|---|
 | `scope` | Path globs from the repository root. `**` spans folders and must be a whole segment (`**/*.cs`, not `**.cs`); `*` and `?` stay within one. Case-sensitive. Not supported: `{a,b}`, `[...]`, `!`, `\`. Turns on P004. Read only by P004; other checks review every changed file. | Not set; P004 off |
-| `conclusion` | `advisory`: findings report as `neutral` (trial mode). `fail-on-warnings`: any Warning or Error finding fails the check; P014 fails only when a rule fires at Error. `fail-on-errors`: any Error finding fails the check. Info findings never fail the check. | `advisory` |
+| `conclusion` | `advisory`: findings report as `neutral` (trial mode). `fail-on-warnings`: any Warning or Error finding fails the check; P014 fails only when a rule fires at Error. `fail-on-errors`: any Error finding fails the check. Info findings never fail the check. Under either fail mode, "Review failed" is `failure`. | `advisory` |
 | `disable` | Check IDs (P001–P019 except the withdrawn P003, P012, P017) skip that check. Rule IDs (`R001`–`R016`) skip that rule inside P014. | None |
 | `ignore` | Entries are a path glob (skipped by every content check) or `{ "paths": [globs], "checks": [IDs] }` (skipped by those checks only). Globs as in `scope`. P004, P008, P011, P013 and P014 read paths or rules files and do not apply `ignore`. Up to 50 entries. The summary lists the entries and how many changed files they match. The only key that removes files from checks. | None |
 | `comment` | `true`: one comment on the pull request with the summary table and up to 25 findings linked to their lines, updated on each new commit. No comment is created while there are no findings; turning it off leaves an existing comment as it is. | `false` |
@@ -110,6 +112,9 @@ Precedence: comments in the file, then rule IDs in `disable`, then `"disable": [
 |---|---|---|
 | No **Aibysitter review** check appears | Repository not selected, or the App lacks Checks permission | Add the repository under **Configure**; accept any pending permission request |
 | Check stays **Queued** | The review is waiting behind others, or the server is restarting | Wait a few minutes. Still queued: push a commit. App owner: redeliver the webhook (App settings → Advanced → Recent deliveries) |
+| Summary says "Not read (over 100 KB)" or "Not read (not UTF-8)" | The App reads files up to 100 KB of UTF-8 text | None; checks that read file contents skip those files, diff checks still run |
+| Summary says "Not read (2 MB review limit reached)" | The App reads at most 2 MB of file content per review | Split the pull request |
+| Check completes as **Review failed** | A GitHub API error, or a check hit the 1-second pattern limit | Push a new commit. App owner: redeliver the webhook |
 | Summary says "R006 skipped" | The repository file list is too large for one GitHub request | None; R006 does not run on that repository |
 | Unexpected P004 findings | `scope` does not cover the path | Add the glob to `scope`, or remove `scope` |
 | Summary says "PR comment not posted: the App needs Pull requests: Read and write" | The installation has not accepted the updated permissions | Accept the pending permission request under **Configure** for Aibysitter |

@@ -22,7 +22,7 @@
 
 <h2>GitHub App</h2>
 <ul>
-    <li>Reads, at the pull request's head commit: the changed files and their diff, and rules files; and <code>.github/aibysitter.json</code> from the base commit. For R006 it also reads the repository file list and the manifests a rules file refers to (<code>package.json</code>, Makefiles, <code>.gitignore</code>, MSBuild files).</li>
+    <li>Reads, at the pull request's head commit: the changed files and their diff, and rules files; and <code>.github/aibysitter.json</code> from the base commit. For R006 it also reads the repository file list and the manifests a rules file refers to (<code>package.json</code>, Makefiles, <code>.gitignore</code>, MSBuild files). Files over 100 KB, not UTF-8, or past 2 MB of file content per review are not read; their paths are listed in the check summary.</li>
     <li>Holds a queue file for the duration of a review: installation ID, repository, pull request number, head and base commits, check run ID and delivery ID. It is deleted when the review completes.</li>
     <li>Stores nothing else. Logs record repository, pull request number, short commit SHA, delivery and check run IDs, finding count and any error text for 14 days. No file contents are logged.</li>
     <li>Results are posted to GitHub as a check run on the pull request, and as one comment when the config sets <code>comment</code>.</li>

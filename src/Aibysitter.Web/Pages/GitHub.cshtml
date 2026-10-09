@@ -80,7 +80,7 @@
             </tr>
             <tr>
                 <td><code>conclusion</code></td>
-                <td><code>advisory</code> reports findings as neutral (trial mode). <code>fail-on-warnings</code> fails the check when any Warning or Error finding exists; P014 fails only when a rule fires at Error. <code>fail-on-errors</code> fails the check when any Error finding exists. Info findings never fail the check.</td>
+                <td><code>advisory</code> reports findings as neutral (trial mode). <code>fail-on-warnings</code> fails the check when any Warning or Error finding exists; P014 fails only when a rule fires at Error. <code>fail-on-errors</code> fails the check when any Error finding exists. Info findings never fail the check. A review that stops on an error closes as "Review failed": failure under <code>fail-on-warnings</code> and <code>fail-on-errors</code>, neutral under <code>advisory</code>.</td>
                 <td><code>advisory</code></td>
             </tr>
             <tr>
@@ -111,7 +111,7 @@
         <li>The App acts as each installation with short-lived installation tokens. The App's private key stays on the server.</li>
         <li>Permissions: Checks (read and write), Pull requests (read and write; write is used only for the <code>comment</code> option), Contents (read). It cannot push, merge, or change settings.</li>
         <li>Checks are static text analysis. Code from the pull request is never run.</li>
-        <li>It reads the pull request's head commit, and the config file from the base commit, with fixed caps: file contents for at most @Aibysitter.Web.GitHub.ReviewProcessor.MaxContentFetches changed files, @Aibysitter.Web.GitHub.ReviewProcessor.MaxUnchangedRulesFiles unchanged rules files and @Aibysitter.Web.GitHub.ReviewProcessor.MaxManifestFetches manifests per review; files over 100 KB or not UTF-8 are not read, and at most 2 MB of file content per review.</li>
+        <li>It reads the pull request's head commit, and the config file from the base commit, with fixed caps: file contents for at most @Aibysitter.Web.GitHub.ReviewProcessor.MaxContentFetches changed files, @Aibysitter.Web.GitHub.ReviewProcessor.MaxUnchangedRulesFiles unchanged rules files and @Aibysitter.Web.GitHub.ReviewProcessor.MaxManifestFetches manifests per review; at most 2 MB of file content per review. Files over 100 KB, not UTF-8, or past the 2 MB limit are not read and are named in the check summary.</li>
     </ul>
     <p>What it reads, keeps and logs: <a asp-page="/Privacy">Privacy</a>.</p>
 </section>
