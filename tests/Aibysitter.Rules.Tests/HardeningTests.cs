@@ -85,6 +85,19 @@ public class HardeningTests(WebApplicationFactory<Program> factory)
             "Too many lint requests. Limit: 20 per 60 seconds. Try again in a minute.",
             Hardening.FormRejectionText(new Web.Infrastructure.LintRateLimitSettings(), null));
 
+    /// <summary>Security review item 9: a trailing slash does not leave the bucket.</summary>
+    [Theory]
+    [InlineData("/Lint/")]
+    [InlineData("/Lint/?handler=Url")]
+    [InlineData("/api/lint/")]
+    public async Task TrailingSlashPaths_ShareTheBucket(string path)
+    {
+        var client = CreateClient(permitLimit: 1);
+
+        Assert.NotEqual(HttpStatusCode.TooManyRequests, (await PostLint(client, NonCloudflareIp)).StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await PostLint(client, NonCloudflareIp, path: path)).StatusCode);
+    }
+
     [Fact]
     public async Task UrlLint_SharesTheBucket()
     {

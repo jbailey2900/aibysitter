@@ -14,6 +14,9 @@ public static class GitHubServiceCollectionExtensions
         services.Configure<ReviewQueueOptions>(configuration.GetSection(ReviewQueueOptions.SectionName));
         services.AddSingleton<IReviewJobStore>(CreateJobStore);
         services.AddSingleton<ReviewQueue>();
+        services.AddSingleton(configuration.GetSection(Infrastructure.WebhookRateLimitSettings.SectionName).Get<Infrastructure.WebhookRateLimitSettings>()
+            ?? new Infrastructure.WebhookRateLimitSettings());
+        services.AddSingleton<WebhookSignatureLimiter>();
         services.AddSingleton(_ => new PullRequestReviewer());
         services.AddSingleton<ReviewProcessor>();
         services.AddHostedService<ReviewQueueRecovery>();

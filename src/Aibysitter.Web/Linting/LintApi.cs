@@ -27,7 +27,7 @@ public static class LintApi
             return Results.Problem(statusCode: StatusCodes.Status415UnsupportedMediaType, title: "Content-Type must be application/json.");
         }
 
-        var body = await ReadBodyAsync(context.Request, cancellationToken);
+        var body = await Infrastructure.RequestBody.ReadCappedAsync(context.Request, MaxBodyBytes, cancellationToken);
         if (body is null)
         {
             return Results.Problem(statusCode: StatusCodes.Status413PayloadTooLarge, title: $"Request body is limited to {MaxBodyBytes / 1024} KB.");
@@ -56,30 +56,6 @@ public static class LintApi
         {
             return Results.Problem(statusCode: StatusCodes.Status422UnprocessableEntity, title: ex.Message);
         }
-    }
-
-    /// <summary>Body bytes, or null when over <see cref="MaxBodyBytes"/>.</summary>
-    private static async Task<byte[]?> ReadBodyAsync(HttpRequest request, CancellationToken cancellationToken)
-    {
-        if (request.ContentLength > MaxBodyBytes)
-        {
-            return null;
-        }
-
-        using var buffer = new MemoryStream();
-        var chunk = new byte[16 * 1024];
-        int read;
-        while ((read = await request.Body.ReadAsync(chunk, cancellationToken)) > 0)
-        {
-            if (buffer.Length + read > MaxBodyBytes)
-            {
-                return null;
-            }
-
-            buffer.Write(chunk, 0, read);
-        }
-
-        return buffer.ToArray();
     }
 
     private static Dictionary<string, string[]>? Validate(Request? request, LintService lint, out RulesFormat format, out IReadOnlyList<string> disabled)

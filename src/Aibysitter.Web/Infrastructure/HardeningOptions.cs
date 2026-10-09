@@ -24,3 +24,13 @@ public sealed class BadgeRateLimitSettings
 
     public int WindowSeconds { get; set; } = 60;
 }
+
+public sealed class WebhookRateLimitSettings
+{
+    public const string SectionName = "RateLimiting:Webhook";
+
+    /// <summary>Requests with an invalid signature per client IP per window.</summary>
+    public int PermitLimit { get; set; } = 60;
+
+    public int WindowSeconds { get; set; } = 60;
+}
