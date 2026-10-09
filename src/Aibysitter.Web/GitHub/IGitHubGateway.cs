@@ -11,10 +11,10 @@ public interface IGitHubGateway
     Task<IReadOnlyList<ChangedFile>> GetChangedFilesAsync(PullRequestRef pr, CancellationToken cancellationToken);
 
     /// <summary>File text at the PR head commit, or null when the file does not exist.</summary>
-    Task<string?> GetFileContentAsync(PullRequestRef pr, string path, CancellationToken cancellationToken);
+    Task<FileContent?> GetFileContentAsync(PullRequestRef pr, string path, CancellationToken cancellationToken);
 
     /// <summary>File text at the PR base commit (<see cref="PullRequestRef.BaseSha"/>), or null when the file does not exist.</summary>
-    Task<string?> GetBaseFileContentAsync(PullRequestRef pr, string path, CancellationToken cancellationToken);
+    Task<FileContent?> GetBaseFileContentAsync(PullRequestRef pr, string path, CancellationToken cancellationToken);
 
     /// <summary>Every file path at the PR head commit and which are symlinks, or null when GitHub truncates the listing.</summary>
     Task<RepoTree?> GetTreeAsync(PullRequestRef pr, CancellationToken cancellationToken);

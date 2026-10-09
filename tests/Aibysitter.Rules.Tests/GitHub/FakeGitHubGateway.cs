@@ -63,16 +63,28 @@ internal sealed class FakeGitHubGateway : IGitHubGateway
         return ThrowOnFiles is null ? Task.FromResult<IReadOnlyList<ChangedFile>>(Files) : Task.FromException<IReadOnlyList<ChangedFile>>(ThrowOnFiles);
     }
 
-    public Task<string?> GetFileContentAsync(PullRequestRef pr, string path, CancellationToken cancellationToken)
+    /// <summary>Head files given as bytes, for size and encoding cases; checked before <see cref="Contents"/>.</summary>
+    public Dictionary<string, byte[]> RawContents { get; } = new(StringComparer.Ordinal);
+
+    public Exception? ThrowOnBaseContent { get; set; }
+
+    public Task<FileContent?> GetFileContentAsync(PullRequestRef pr, string path, CancellationToken cancellationToken)
     {
         Calls.Enqueue($"content {path}");
-        return Task.FromResult(Contents.GetValueOrDefault(path));
+        return Task.FromResult(RawContents.TryGetValue(path, out var raw)
+            ? FileContent.From(raw.Length, () => raw)
+            : Contents.TryGetValue(path, out var text) ? FileContent.FromText(text) : null);
     }
 
-    public Task<string?> GetBaseFileContentAsync(PullRequestRef pr, string path, CancellationToken cancellationToken)
+    public Task<FileContent?> GetBaseFileContentAsync(PullRequestRef pr, string path, CancellationToken cancellationToken)
     {
         Calls.Enqueue($"base content {path}");
-        return Task.FromResult(BaseContents.GetValueOrDefault(path));
+        if (ThrowOnBaseContent is not null)
+        {
+            return Task.FromException<FileContent?>(ThrowOnBaseContent);
+        }
+
+        return Task.FromResult(BaseContents.TryGetValue(path, out var text) ? FileContent.FromText(text) : null);
     }
 
     public Task<RepoTree?> GetTreeAsync(PullRequestRef pr, CancellationToken cancellationToken)

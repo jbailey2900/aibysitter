@@ -19,12 +19,15 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
     public async Task<bool> ProcessAsync(ReviewJob job, CancellationToken cancellationToken)
     {
         var pr = job.PullRequest;
+        RepoConfig? readConfig = null;
         try
         {
             await MarkInProgressAsync(job, cancellationToken);
 
             var files = await gateway.GetChangedFilesAsync(pr, cancellationToken);
             var (config, configErrors, configNote) = await ReadConfigAsync(pr, files, cancellationToken);
+            readConfig = config;
+            var budget = new ContentBudget();
 
             var notes = new List<string>();
             var tree = await TreeForRulesFilesAsync(pr, files, config, cancellationToken);
@@ -49,11 +52,12 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
             foreach (var file in files)
             {
                 enriched.Add(toFetch.Contains(file.Path)
-                    ? file with { HeadContent = await gateway.GetFileContentAsync(pr, file.Path, cancellationToken) }
+                    ? file with { HeadContent = await budget.ReadAsync(file.Path, () => gateway.GetFileContentAsync(pr, file.Path, cancellationToken)) }
                     : file);
             }
 
-            var (repo, unchanged) = await BuildRepoViewAsync(pr, files, enriched, config, tree, notes, cancellationToken);
+            var (repo, unchanged) = await BuildRepoViewAsync(pr, files, enriched, config, tree, notes, budget, cancellationToken);
+            notes.AddRange(budget.Notes());
 
             var review = reviewer.Review(new PullRequestContext(enriched, config, repo, unchanged, tree?.Paths));
             var report = CheckRunReport.Build(review, reviewer.Checks, enriched, config, configErrors, notes, configNote);
@@ -84,7 +88,8 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
             logger.LogError(ex, "Review of {PullRequest} (delivery {DeliveryId}) failed", pr, job.DeliveryId);
             try
             {
-                var failed = ex is System.Text.RegularExpressions.RegexMatchTimeoutException ? CheckRunReport.ForTimeout() : CheckRunReport.ForError(ex);
+                var conclusion = await ErrorConclusionAsync(pr, readConfig, cancellationToken);
+                var failed = ex is System.Text.RegularExpressions.RegexMatchTimeoutException ? CheckRunReport.ForTimeout(conclusion) : CheckRunReport.ForError(ex, conclusion);
                 await gateway.CompleteCheckRunAsync(pr, job.CheckRunId, failed, cancellationToken);
                 usage?.Increment(Stats.UsageMetric.Review, "error");
                 return true;
@@ -96,6 +101,37 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
             }
         }
     }
+
+    /// <summary>
+    /// Under fail-on-warnings or fail-on-errors a review error fails the check, so an error cannot turn a failure into a pass;
+    /// advisory stays neutral. When the config was not read before the error, one more read is tried; if that fails too, Failure.
+    /// </summary>
+    private async Task<ReviewConclusion> ErrorConclusionAsync(PullRequestRef pr, RepoConfig? config, CancellationToken cancellationToken)
+    {
+        if (config is null)
+        {
+            try
+            {
+                var content = pr.BaseSha is null
+                    ? await gateway.GetFileContentAsync(pr, RepoConfig.FilePath, cancellationToken)
+                    : await gateway.GetBaseFileContentAsync(pr, RepoConfig.FilePath, cancellationToken);
+                config = ParseConfig(content).Config;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+            {
+                logger.LogWarning(ex, "Config for {PullRequest} unreadable after a review error; closing as failure", pr);
+                return ReviewConclusion.Failure;
+            }
+        }
+
+        return config.FailsCheck ? ReviewConclusion.Failure : ReviewConclusion.Neutral;
+    }
+
+    /// <summary>Parses the config file; a file that was not decoded gives the defaults and one config error.</summary>
+    internal static (RepoConfig Config, IReadOnlyList<ConfigError> Errors) ParseConfig(FileContent? content) =>
+        content?.Skipped is { } reason
+            ? (RepoConfig.Default, [new ConfigError(1, $"{RepoConfig.FilePath}: {reason}; defaults used")])
+            : RepoConfig.Parse(content?.Text);
 
     public const string ConfigChangedNote =
         "This pull request changes `.github/aibysitter.json`. It was reviewed with the base branch's version; the change applies after merge.";
@@ -110,11 +146,11 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
     {
         if (pr.BaseSha is null)
         {
-            var (headConfig, headErrors) = RepoConfig.Parse(await gateway.GetFileContentAsync(pr, RepoConfig.FilePath, cancellationToken));
+            var (headConfig, headErrors) = ParseConfig(await gateway.GetFileContentAsync(pr, RepoConfig.FilePath, cancellationToken));
             return (headConfig, headErrors, null);
         }
 
-        var (config, errors) = RepoConfig.Parse(await gateway.GetBaseFileContentAsync(pr, RepoConfig.FilePath, cancellationToken));
+        var (config, errors) = ParseConfig(await gateway.GetBaseFileContentAsync(pr, RepoConfig.FilePath, cancellationToken));
         if (!files.Any(f => f.Path == RepoConfig.FilePath || f.PreviousPath == RepoConfig.FilePath))
         {
             return (config, errors, null);
@@ -123,7 +159,7 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
         var headVersion = files.Any(f => f.Path == RepoConfig.FilePath && f.Status != FileChangeStatus.Removed)
             ? await gateway.GetFileContentAsync(pr, RepoConfig.FilePath, cancellationToken)
             : null;
-        return (config, RepoConfig.Parse(headVersion).Errors, ConfigChangedNote);
+        return (config, ParseConfig(headVersion).Errors, ConfigChangedNote);
     }
 
     /// <summary>The in_progress status is cosmetic; a failure is logged and the review continues.</summary>
@@ -165,6 +201,7 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
         RepoConfig config,
         RepoTree? tree,
         List<string> notes,
+        ContentBudget budget,
         CancellationToken cancellationToken)
     {
         if (!config.IsEnabled(RulesFileLint.CheckId) || !config.IsEnabled(MissingIdentifiers.RuleId))
@@ -196,7 +233,7 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
             foreach (var path in paths.Where(p => !changedPaths.Contains(p) && !tree!.Symlinks.Contains(p) && RulesFormats.FromFileName(p) is not null)
                 .OrderBy(p => p.Count(c => c == '/')).ThenBy(p => p, StringComparer.Ordinal).Take(MaxUnchangedRulesFiles))
             {
-                var text = await gateway.GetFileContentAsync(pr, path, cancellationToken);
+                var text = await budget.ReadAsync(path, () => gateway.GetFileContentAsync(pr, path, cancellationToken));
                 if (text is not null)
                 {
                     contents[path] = text;
@@ -219,7 +256,7 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
 
         foreach (var path in needed.Take(MaxManifestFetches))
         {
-            contents[path] = await gateway.GetFileContentAsync(pr, path, cancellationToken);
+            contents[path] = await budget.ReadAsync(path, () => gateway.GetFileContentAsync(pr, path, cancellationToken));
         }
 
         return (new RepoSnapshot(paths, p => contents.GetValueOrDefault(p)), unchanged);
