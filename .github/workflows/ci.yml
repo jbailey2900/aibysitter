@@ -54,7 +54,7 @@ jobs:
         run: python3 .github/scripts/annotate-trx.py
 
   smoke:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Browser smoke suite against a local site: no SQL Server, no GitHub, no network beyond localhost.
     env:
       AIBYSITTER_SMOKE_URL: http://127.0.0.1:5080
