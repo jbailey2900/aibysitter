@@ -119,7 +119,7 @@ aibysitter packs
 - `fix`: fixes R011 (deletes empty headings) and R012 (closes the fence at end of file), repeated until none apply; writes in place. `--dry-run` prints a unified diff and exits 1 when there are changes. With `-`, the fixed text goes to standard output.
 - `hook claude-code`: Claude Code `PostToolUse` hook; exits 2 with Error and Warning findings on stderr when the edited file is a rules file. Hooks: [`hooks/`](hooks/) and [aibysitting.net/Hooks](https://aibysitting.net/Hooks).
 - `init` writes a rules file composed from rules packs (below), then prints its score. `--format`: claude, agents, gemini, copilot, cursor, cursorrules, windsurf. Default output: where that format goes (`CLAUDE.md`, `.github/copilot-instructions.md`, `.cursor/rules/<pack>.mdc`, ...). An existing file needs `--force`.
-- Exit codes: 0 ok, 1 a `--fail-*` threshold failed or `fix --dry-run` found changes, 2 usage error, 3 file not readable or not writable. Without a `--fail-*` flag the exit code is 0 whatever the findings.
+- Exit codes: 0 ok, 1 a `--fail-*` threshold failed or `fix --dry-run` found changes, 2 usage error, 3 file not readable or not writable, 4 lint timed out (a pattern ran longer than 1 second). Without a `--fail-*` flag the exit code is 0 whatever the findings.
 - No length limit.
 
 ## Rules packs

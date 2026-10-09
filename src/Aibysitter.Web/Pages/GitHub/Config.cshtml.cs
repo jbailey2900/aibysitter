@@ -11,6 +11,8 @@ namespace Aibysitter.Web.Pages.GitHub;
 /// <summary>Builds <c>.github/aibysitter.json</c> from the form and validates it with the App's parser.</summary>
 public class ConfigModel : PageModel
 {
+    public const string PatternTimeoutMessage = "A pattern took too long to match. Simplify the glob.";
+
     public const int MaxScopeLength = 10_000;
     public const int MaxPathLength = 1_000;
     public const string DownloadName = "aibysitter.json";
@@ -91,10 +93,17 @@ public class ConfigModel : PageModel
         Json = RepoConfigWriter.Write(RepoConfigWriter.ScopeLines(Scope), Conclusion, disable, Comment, RepoConfigWriter.ScopeLines(Ignore));
         var (config, errors) = RepoConfig.Parse(Json);
         Errors = errors;
-        ConfigFileOutOfScope = config.HasScope && !config.InScope(RepoConfig.FilePath);
-        if (TestPath?.Trim() is { Length: > 0 } path)
+        try
         {
-            PathTest = new ScopeTest(path, config.HasScope, config.Scope.FirstOrDefault(g => g.IsMatch(path))?.Pattern);
+            ConfigFileOutOfScope = config.HasScope && !config.InScope(RepoConfig.FilePath);
+            if (TestPath?.Trim() is { Length: > 0 } path)
+            {
+                PathTest = new ScopeTest(path, config.HasScope, config.Scope.FirstOrDefault(g => g.IsMatch(path))?.Pattern);
+            }
+        }
+        catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+        {
+            ModelState.AddModelError(nameof(TestPath), PatternTimeoutMessage);
         }
     }
 

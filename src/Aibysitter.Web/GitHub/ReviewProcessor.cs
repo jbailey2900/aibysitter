@@ -84,7 +84,8 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
             logger.LogError(ex, "Review of {PullRequest} (delivery {DeliveryId}) failed", pr, job.DeliveryId);
             try
             {
-                await gateway.CompleteCheckRunAsync(pr, job.CheckRunId, CheckRunReport.ForError(ex), cancellationToken);
+                var failed = ex is System.Text.RegularExpressions.RegexMatchTimeoutException ? CheckRunReport.ForTimeout() : CheckRunReport.ForError(ex);
+                await gateway.CompleteCheckRunAsync(pr, job.CheckRunId, failed, cancellationToken);
                 usage?.Increment(Stats.UsageMetric.Review, "error");
                 return true;
             }

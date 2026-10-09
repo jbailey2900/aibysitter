@@ -23,11 +23,22 @@ public sealed class LintService(LintEngine engine, ILogger<LintService> logger, 
 
     /// <param name="disabled">Normalized IDs from <see cref="TryNormalizeDisabled"/>.</param>
     /// <param name="source">"form" or "api", for the log line.</param>
+    /// <exception cref="LintTimeoutException">A rule pattern hit <see cref="RegexTimeout.Default"/>.</exception>
     public LintOutcome Lint(string text, RulesFormat format, IReadOnlyList<string> disabled, string source)
     {
         var active = engine.Without(disabled);
         var rules = active.Rules.ToDictionary(r => r.Id);
-        var result = active.Analyze(text, format);
+        LintResult result;
+        try
+        {
+            result = active.Analyze(text, format);
+        }
+        catch (System.Text.RegularExpressions.RegexMatchTimeoutException ex)
+        {
+            logger.LogWarning("Lint timed out on {Length} chars as {Format} ({Source})", text.Length, format, source);
+            throw new LintTimeoutException(ex);
+        }
+
         var score = active.Score(result.Findings);
         var outcome = new LintOutcome(
             result.Format,
@@ -55,3 +66,6 @@ public sealed class LintService(LintEngine engine, ILogger<LintService> logger, 
     private static LintRow Row(Finding finding, Dictionary<string, IRule> rules) =>
         new(finding, rules[finding.RuleId].Title, rules[finding.RuleId].Severity);
 }
+
+/// <summary>Linting stopped at the regex match timeout. <see cref="Exception.Message"/> is safe to show.</summary>
+public sealed class LintTimeoutException(Exception inner) : Exception(RegexTimeout.LintMessage, inner);

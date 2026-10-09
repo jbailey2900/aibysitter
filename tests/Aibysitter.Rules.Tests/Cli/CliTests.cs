@@ -44,7 +44,7 @@ public sealed class CliTests : IDisposable
 
         Assert.Equal(CliApp.Ok, result.Exit);
         Assert.Contains("aibysitter lint <file|-> [options]", result.Out);
-        Assert.Contains("Exit codes: 0 ok, 1 threshold failed (lint) or changes found (fix --dry-run), 2 usage error, 3 file not readable or not writable.", result.Out);
+        Assert.Contains("Exit codes: 0 ok, 1 threshold failed (lint) or changes found (fix --dry-run), 2 usage error, 3 file not readable or not writable, 4 lint timed out.", result.Out);
         Assert.Contains("aibysitter init --packs <ids> --format <name>", result.Out);
         Assert.Empty(result.Err);
     }

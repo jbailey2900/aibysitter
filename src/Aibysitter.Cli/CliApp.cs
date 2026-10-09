@@ -13,6 +13,10 @@ public static class CliApp
     public const int ThresholdFailed = 1;
     public const int UsageError = 2;
     public const int FileError = 3;
+    public const int TimedOut = 4;
+
+    /// <summary>Engine for <c>lint</c>; replaced in tests.</summary>
+    internal static Func<LintEngine> EngineFactory { get; set; } = () => new LintEngine();
 
     public const string StdinLabel = "<stdin>";
 
@@ -71,10 +75,23 @@ public static class CliApp
           file is a rules file with Error or Warning findings, prints them to standard error and exits 2 so Claude
           fixes them. Otherwise exits 0. Extra flags also come from AIBYSITTER_HOOK_ARGS (--disable only).
 
-        Exit codes: 0 ok, 1 threshold failed (lint) or changes found (fix --dry-run), 2 usage error, 3 file not readable or not writable.
+        Exit codes: 0 ok, 1 threshold failed (lint) or changes found (fix --dry-run), 2 usage error, 3 file not readable or not writable, 4 lint timed out.
         """;
 
     public static int Run(string[] args, TextReader stdin, TextWriter stdout, TextWriter stderr)
+    {
+        try
+        {
+            return Dispatch(args, stdin, stdout, stderr);
+        }
+        catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+        {
+            stderr.WriteLine($"aibysitter: {RegexTimeout.LintMessage}");
+            return TimedOut;
+        }
+    }
+
+    private static int Dispatch(string[] args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
         switch (args)
         {
@@ -114,7 +131,7 @@ public static class CliApp
 
     private static int Lint(LintOptions options, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
-        var engine = new LintEngine();
+        var engine = EngineFactory();
         if (!LintReport.TryNormalizeDisabled(engine, options.Disable, out var disabled, out var unknown))
         {
             return UsageFail(stderr, $"Not a lint rule ID: {string.Join(", ", unknown)}.");

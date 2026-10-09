@@ -65,10 +65,10 @@ public sealed partial class SwallowedExceptions : IPullRequestCheck
     [GeneratedRegex(@"^\s*except\b")]
     private static partial Regex ExceptStartRegex();
 
-    /// <summary>catch, optional (…), optional when (…), then { } containing only whitespace and comments.</summary>
-    [GeneratedRegex(@"\bcatch\b\s*(?:\([^)]*\))?\s*(?:when\s*\([^)]*\)\s*)?\{(?:\s|//[^\n]*|/\*.*?\*/)*\}", RegexOptions.Singleline)]
+    /// <summary>catch, optional (…), optional when (…), then { } containing only whitespace and comments. A // comment ends at a newline; no alternative overlaps another.</summary>
+    [GeneratedRegex(@"\bcatch\b\s*(?:\([^)]*\))?\s*(?:when\s*\([^)]*\)\s*)?\{(?:\s|//[^\n]*\n|/\*(?:[^*]|\*(?!/))*\*/)*\}", RegexOptions.Singleline)]
     private static partial Regex EmptyCatchRegex();
 
-    [GeneratedRegex(@"^\s*except\b[^:\n]*:[ \t]*(?:#[^\n]*)?(?:\n[ \t]*(?:#[^\n]*)?)*?(?:\n)?[ \t]*pass\b[ \t]*(?:#[^\n]*)?$", RegexOptions.Multiline)]
+    [GeneratedRegex(@"^[ \t]*except\b[^:\n]*:[ \t]*(?:#[^\n]*)?(?:\n[ \t]*(?:#[^\n]*)?)*?(?:\n)?[ \t]*pass\b[ \t]*(?:#[^\n]*)?$", RegexOptions.Multiline)]
     private static partial Regex ExceptPassRegex();
 }

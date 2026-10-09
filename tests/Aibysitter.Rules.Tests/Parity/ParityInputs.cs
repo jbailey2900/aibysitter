@@ -65,6 +65,11 @@ internal static class ParityInputs
         yield return Edge("bom-and-nel", "# T\n## A\n\uFEFF\n## B\n\u0085\n## C\n- Run it.\u0085\n");
         yield return Edge("empty", "");
         yield return Edge("only-newlines", "\n\n\n");
+        yield return Edge("headings", "# a #\n## C##\n#\n######\n#foo\n#  \n### x # #\n####### seven\n   # three spaces\n    # four spaces\n## End ##  \n- Run it.");
+        foreach (var redos in SecurityInputs.ParityLines)
+        {
+            yield return Edge("redos/" + redos.Name, "# T\n\n## S\n" + redos.Text);
+        }
     }
 
     private static ParityInput Edge(string name, string text, RulesFormat format = RulesFormat.Auto) => new("edge/" + name, text, format);

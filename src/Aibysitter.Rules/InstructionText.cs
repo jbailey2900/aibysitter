@@ -199,16 +199,16 @@ internal static partial class InstructionText
     [GeneratedRegex(@"`[^`]*`")]
     private static partial Regex CodeSpanRegex();
 
-    [GeneratedRegex(@"\[([^\]]*)\]\([^)]*\)")]
+    [GeneratedRegex(@"\[([^\[\]]*)\]\([^)\[]*\)")]
     private static partial Regex LinkRegex();
 
     [GeneratedRegex(@"https?://\S+")]
     private static partial Regex UrlRegex();
 
-    [GeneratedRegex(@"(?<![\w])[\w.-]*/[\w./-]+")]
+    [GeneratedRegex(@"(?<![\w.-])[\w.-]*/[\w./-]+")]
     private static partial Regex PathRegex();
 
-    [GeneratedRegex(@"\b[\w-]+\.(?:md|mdc|json|ya?ml|toml|txt|cs|csproj|ts|tsx|js|jsx|py|go|rs|rb|sh|ps1|sql|xml|html|css)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<![\w-])[\w-]+\.(?:md|mdc|json|ya?ml|toml|txt|cs|csproj|ts|tsx|js|jsx|py|go|rs|rb|sh|ps1|sql|xml|html|css)\b", RegexOptions.IgnoreCase)]
     private static partial Regex FileNameRegex();
 
     [GeneratedRegex(@"^(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?")]
@@ -217,7 +217,7 @@ internal static partial class InstructionText
     [GeneratedRegex(@"^[^:.;!?]{1,40}:\s+")]
     private static partial Regex LabelRegex();
 
-    [GeneratedRegex(@"(?<=[.;!?])\s+|\s+(?:—|–|-)\s+")]
+    [GeneratedRegex(@"(?<=[.;!?])\s+|(?<!\s)\s+(?:—|–|-)\s+")]
     private static partial Regex ClauseSplitRegex();
 
     /// <summary>Sentence ends: ".", "!", "?" or ";" followed by whitespace, not after "e.g.", "i.e.", "etc." or "vs.".</summary>
@@ -247,7 +247,7 @@ internal static partial class InstructionText
     /// Modal or obligation anywhere in the sentence. "do not / don't" after a subject pronoun ("we do not", "that do not")
     /// is descriptive; "never" counts only at a clause start (<c>ImperativeStartRegex</c>).
     /// </summary>
-    [GeneratedRegex(@"\b(?:must|mustn't|should|shouldn't|shall|needs?\s+to|ha(?:ve|s)\s+to|(?:is|are)\s+required|you\s+(?:can|could|may|might))\b|(?<!\b(?:we|they|it|i|which|that|who|these|those|people|users)\s+(?:[a-z]+ly\s+)?)\b(?:do\s+not|don't)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(?:must|mustn't|should|shouldn't|shall|needs?\s+to|ha(?:ve|s)\s+to|(?:is|are)\s+required|you\s+(?:can|could|may|might))\b|\b(?=do\s+not\b|don't\b)(?<!\b(?:we|they|it|i|which|that|who|these|those|people|users)\s+(?:[a-z]+ly\s+)?)(?:do\s+not|don't)\b", RegexOptions.IgnoreCase)]
     private static partial Regex ModalRegex();
 
     /// <summary>MDX documentation components at a line start: pasted product documentation.</summary>

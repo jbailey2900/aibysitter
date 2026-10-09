@@ -91,14 +91,14 @@ public sealed partial class RulesFile
             }
 
             var heading = HeadingRegex().Match(lineText);
-            if (heading.Success)
+            if (heading.Success && heading.Groups[2].Success)
             {
                 if (number > sectionStart || sectionLevel > 0)
                 {
                     sections.Add(new Section(sectionHeading, sectionLevel, sectionStart, number - 1));
                 }
 
-                sectionHeading = heading.Groups[2].Value.Trim();
+                sectionHeading = HeadingText(heading.Groups[2].Value);
                 sectionLevel = heading.Groups[1].Value.Length;
                 sectionStart = number;
                 lines.Add(new RulesLine(number, lineText, IsHeading: true, IsInCodeFence: false));
@@ -130,6 +130,10 @@ public sealed partial class RulesFile
     [GeneratedRegex(@"^\s{0,3}(`{3,}|~{3,})")]
     private static partial Regex FenceRegex();
 
-    [GeneratedRegex(@"^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$")]
+    /// <summary>Heading text without trailing whitespace and the closing # sequence.</summary>
+    internal static string HeadingText(string afterHashes) => afterHashes.TrimEnd().TrimEnd('#').Trim();
+
+    /// <summary>ATX heading: up to 3 leading spaces, 1–6 #, then whitespace and text (group 2). A bare # run leaves group 2 unset and is not a heading.</summary>
+    [GeneratedRegex(@"^\s{0,3}(#{1,6})(?:\s+(.*))?$")]
     private static partial Regex HeadingRegex();
 }

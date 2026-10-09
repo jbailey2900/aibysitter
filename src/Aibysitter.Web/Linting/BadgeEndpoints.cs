@@ -88,7 +88,16 @@ public sealed class BadgeService(IServiceProvider services, LintService lint, IS
             return new BadgeResult(null, null);
         }
 
-        var outcome = lint.Lint(fetched.Content!, RulesFormats.FromFileName(fetched.FileName!) ?? RulesFormat.Auto, [], "badge");
+        LintOutcome outcome;
+        try
+        {
+            outcome = lint.Lint(fetched.Content!, RulesFormats.FromFileName(fetched.FileName!) ?? RulesFormat.Auto, [], "badge");
+        }
+        catch (LintTimeoutException)
+        {
+            return new BadgeResult(null, null);
+        }
+
         if (history.Enabled)
         {
             await history.RecordAsync(

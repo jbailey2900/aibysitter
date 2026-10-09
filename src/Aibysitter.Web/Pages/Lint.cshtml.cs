@@ -116,7 +116,17 @@ public class LintModel(LintService lint, GalleryCatalog galleryCatalog, RawGitHu
         {
             RulesText = fetched.Content;
             Format = RulesFormats.FromFileName(fetched.FileName!) ?? RulesFormat.Auto;
-            var outcome = lint.Lint(RulesText!, Format, [], "url");
+            LintOutcome outcome;
+            try
+            {
+                outcome = lint.Lint(RulesText!, Format, [], "url");
+            }
+            catch (LintTimeoutException ex)
+            {
+                UrlLint = UrlLint with { Error = ex.Message };
+                return Page();
+            }
+
             Show(outcome);
             await RecordAsync(ScoreHistoryKey.Repo(parsed!), fetched.FileName!, outcome.Score, cancellationToken);
             var isDefault = RawGitHubFetcher.FileNames.First(n => n == fetched.FileName || fetched.OtherFiles.Contains(n)) == fetched.FileName;
@@ -150,6 +160,13 @@ public class LintModel(LintService lint, GalleryCatalog galleryCatalog, RawGitHu
     {
         var off = RulesPosted ? lint.Rules.Select(r => r.Id).Except(Enabled, StringComparer.OrdinalIgnoreCase) : Enumerable.Empty<string>();
         Disabled = lint.TryNormalizeDisabled(off, out var disabled, out _) ? disabled : [];
-        Show(lint.Lint(RulesText!, Format, Disabled, "form"));
+        try
+        {
+            Show(lint.Lint(RulesText!, Format, Disabled, "form"));
+        }
+        catch (LintTimeoutException ex)
+        {
+            ModelState.AddModelError(nameof(RulesText), ex.Message);
+        }
     }
 }

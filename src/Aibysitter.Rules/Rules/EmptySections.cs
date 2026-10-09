@@ -106,6 +106,6 @@ public sealed partial class EmptySections : IRule
     [GeneratedRegex(@"^\s{0,3}(#{1,6})\s")]
     private static partial Regex LevelRegex();
 
-    [GeneratedRegex(@"^\s{0,3}#{1,6}\s+|\s+#+\s*$")]
+    [GeneratedRegex(@"^\s{0,3}#{1,6}\s+|(?<!\s)\s+#+\s*$")]
     private static partial Regex HeadingTextRegex();
 }

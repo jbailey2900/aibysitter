@@ -56,9 +56,9 @@ public sealed partial class RationaleProse : IRule
     }
 
     /// <summary>Quoted spans: "…", “…”, and '…' opened after a space, "(" or line start.</summary>
-    [GeneratedRegex(@"""[^""]*""|“[^”]*”|(?<=^|[\s(])'[^'\n]+'(?=[\s).,;:!?]|$)")]
+    [GeneratedRegex(@"""[^""]*""|“[^“”]*”|(?<=^|[\s(])'[^'\n]+'(?=[\s).,;:!?]|$)")]
     private static partial Regex QuotedRegex();
 
-    [GeneratedRegex(@"(?<![/""'“‘]\s*)(?<!\b(?:just|only|simply|merely|solely|purely)\s+)(?<!\b(?:report|reports|give|gives|state|states|log|logs|include|includes|record|records|show|shows|name|names|note|notes|with)\s+)\b(?:because(?!\s+of\b)|so that|in order to|the reason(?!\s*(?:[.,;:)]|and\b|or\b|$))|this ensures|this helps|which means)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(?=because|so\s+that|in\s+order\s+to|the\s+reason|this\s+ensures|this\s+helps|which\s+means)(?<![/""'“‘]\s*)(?<!\b(?:just|only|simply|merely|solely|purely)\s+)(?<!\b(?:report|reports|give|gives|state|states|log|logs|include|includes|record|records|show|shows|name|names|note|notes|with)\s+)\b(?:because(?!\s+of\b)|so that|in order to|the reason(?!\s*(?:[.,;:)]|and\b|or\b|$))|this ensures|this helps|which means)\b", RegexOptions.IgnoreCase)]
     private static partial Regex PhraseRegex();
 }

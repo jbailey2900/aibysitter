@@ -6,6 +6,7 @@ namespace Aibysitter.Rules.Repo;
 /// <summary>
 /// Subset of .gitignore matching: comments, blank lines, anchored (leading or inner slash) and unanchored patterns,
 /// trailing-slash directories, *, **, ?. Negation lines (!) are ignored, so a re-included path still counts as ignored.
+/// Lines with more than <see cref="PullRequests.Glob.MaxWildcards"/> wildcards are skipped.
 /// </summary>
 public sealed class GitIgnore
 {
@@ -30,6 +31,10 @@ public sealed class GitIgnore
             line = line.TrimEnd('/');
             var anchored = line.Contains('/');
             line = line.TrimStart('/');
+            if (PullRequests.Glob.WildcardCount(line) > PullRequests.Glob.MaxWildcards)
+            {
+                continue;
+            }
 
             var body = ToRegex(line);
             var regex = anchored ? $"^{body}(?:/.*)?$" : $"(?:^|/){body}(?:/.*)?$";
@@ -38,7 +43,7 @@ public sealed class GitIgnore
                 regex = anchored ? $"^{body}/.*$|^{body}$" : $"(?:^|/){body}(?:/.*)?$";
             }
 
-            patterns.Add((new Regex(regex, RegexOptions.CultureInvariant), RepoSnapshot.Normalize(baseDir)));
+            patterns.Add((new Regex(regex, RegexOptions.CultureInvariant | RegexOptions.NonBacktracking), RepoSnapshot.Normalize(baseDir)));
         }
     }
 

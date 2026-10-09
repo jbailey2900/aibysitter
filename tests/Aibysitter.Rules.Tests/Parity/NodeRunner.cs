@@ -32,6 +32,14 @@ internal static class NodeRunner
         return null;
     }
 
+    /// <summary>Best-of-three milliseconds per (pattern key, text), matched with the exported JS pattern.</summary>
+    public static IReadOnlyList<double> TimePatterns(string node, IReadOnlyList<(string Key, string Text)> items) =>
+        System.Text.Json.JsonSerializer.Deserialize<double[]>(Run(node, "time-patterns", System.Text.Json.JsonSerializer.Serialize(items.Select(i => new { key = i.Key, text = i.Text }))))!;
+
+    /// <summary>Best-of-three milliseconds per text, linted by the browser engine.</summary>
+    public static IReadOnlyList<double> TimeLint(string node, IReadOnlyList<string> texts) =>
+        System.Text.Json.JsonSerializer.Deserialize<double[]>(Run(node, "time-lint", System.Text.Json.JsonSerializer.Serialize(texts)))!;
+
     public static string Run(string node, string mode, string stdin)
     {
         var start = new ProcessStartInfo(node)

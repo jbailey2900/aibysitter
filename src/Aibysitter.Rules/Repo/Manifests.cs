@@ -66,10 +66,10 @@ public static partial class Manifests
     [GeneratedRegex(@"\\\r?\n")]
     private static partial Regex ContinuationRegex();
 
-    [GeneratedRegex(@"^\s*-?include\s", RegexOptions.Multiline)]
+    [GeneratedRegex(@"^[ \t]*-?include\s", RegexOptions.Multiline)]
     private static partial Regex MakeIncludeRegex();
 
-    [GeneratedRegex(@"^(?<targets>[^\s:#=][^:=#]*?)\s*::?(?!=)", RegexOptions.Multiline)]
+    [GeneratedRegex(@"^(?<targets>[^\s:#=](?:[^:=#\n]*[^\s:=#])?)\s*::?(?!=)", RegexOptions.Multiline)]
     private static partial Regex MakeRuleRegex();
 
     [GeneratedRegex(@"<Target\s+[^>]*?Name\s*=\s*""([^""]+)""", RegexOptions.IgnoreCase)]

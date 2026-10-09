@@ -92,7 +92,7 @@ Copy with `app_offline.htm` in place, then remove it.
 
 - Runner labels: `self-hosted`, `windows`, and the value of repo variable `RUNNER_LABEL`.
 - Repo variable `SITE_PATH`: the IIS site's physical path.
-- Repo variable `DB_CONNECTION`: connection string the runner uses to apply migrations, for example `Server=.;Database=Aibysitter;Integrated Security=true;TrustServerCertificate=true`.
+- Repo secret `DB_CONNECTION`: connection string the runner uses to apply migrations, for example `Server=.;Database=Aibysitter;Integrated Security=true;TrustServerCertificate=true`.
 - Migrations: the workflow builds an EF Core migrations bundle and applies it before taking the site offline. A failed migration fails the workflow and leaves the current site serving.
 - Runner service account: Modify on `SITE_PATH`.
 - The health check resolves `aibysitting.net` to 127.0.0.1; change the host name in the workflow for another domain.

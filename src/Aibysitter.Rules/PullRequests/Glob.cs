@@ -7,8 +7,11 @@ namespace Aibysitter.Rules.PullRequests;
 /// Path glob anchored at the repo root, '/' separated, case-sensitive.
 /// '**' matches any number of segments (including none), '*' any run within a segment, '?' one character within a segment.
 /// </summary>
-public sealed class Glob
+public sealed partial class Glob
 {
+    /// <summary>Most wildcards (each *, ** and ?) one pattern may hold.</summary>
+    public const int MaxWildcards = 8;
+
     private readonly Regex regex;
 
     /// <summary>Throws <see cref="ArgumentException"/> with the <see cref="Validate"/> message for an unsupported pattern.</summary>
@@ -21,7 +24,7 @@ public sealed class Glob
         }
 
         Pattern = pattern.Trim().TrimStart('/');
-        regex = new Regex(ToRegex(Pattern), RegexOptions.CultureInvariant);
+        regex = new Regex(ToRegex(Pattern), RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
     }
 
     public string Pattern { get; }
@@ -88,8 +91,19 @@ public sealed class Glob
             return "** must be a whole path segment; for files in any folder use **/*.cs";
         }
 
+        if (WildcardCount(p) > MaxWildcards)
+        {
+            return $"at most {MaxWildcards} wildcards (*, **, ?) per pattern";
+        }
+
         return null;
     }
+
+    /// <summary>Each *, ** and ? counts once.</summary>
+    public static int WildcardCount(string pattern) => WildcardRegex().Count(pattern);
+
+    [GeneratedRegex(@"\*\*|\*|\?")]
+    private static partial Regex WildcardRegex();
 
     public bool IsMatch(string path) => regex.IsMatch(path.TrimStart('/'));
 

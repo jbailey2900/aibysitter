@@ -51,7 +51,7 @@ public sealed partial class HedgedInstructions : IRule
 
     private static string Normalize(string value) => WhitespaceRegex().Replace(value.ToLowerInvariant(), " ");
 
-    [GeneratedRegex(@"(?<!\b(?:not|never|don't|n't|can|could|may|might|would|will)\s+)\btry\s+to\b|\bif\s+possible\b|\bideally\b|\b(?:where|when|whenever)\s+possible\b|\bprefer\s+to\b(?!.*\b(?:not|instead\s+of|over|rather\s+than)\b)|\b(?:where|when|if|as)\s+appropriate\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(?=try\s+to\b)(?<!\b(?:not|never|don't|n't|can|could|may|might|would|will)\s+)try\s+to\b|\bif\s+possible\b|\bideally\b|\b(?:where|when|whenever)\s+possible\b|\bprefer\s+to\b(?!(?:(?!\bprefer\s+to\b).)*\b(?:not|instead\s+of|over|rather\s+than)\b)|\b(?:where|when|if|as)\s+appropriate\b", RegexOptions.IgnoreCase)]
     private static partial Regex HedgeRegex();
 
     /// <summary>"consider" as a suggestion: opening the clause, or after "you can / could / may / might / should".</summary>
@@ -70,7 +70,7 @@ public sealed partial class HedgedInstructions : IRule
     [GeneratedRegex(@"^\s*[=:/]")]
     private static partial Regex LabelUseRegex();
 
-    [GeneratedRegex(@"""[^""]*""|“[^”]*”")]
+    [GeneratedRegex(@"""[^""]*""|“[^“”]*”")]
     private static partial Regex QuotedRegex();
 
     [GeneratedRegex(@"\s+")]
