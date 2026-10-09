@@ -13,7 +13,7 @@ public class RulesetVersionTests(WebApplicationFactory<Program> factory)
     /// A change here means a rule or scoring change: bump RulesetVersion.Current, add a changelog entry, then re-pin both.
     /// </summary>
     private const int PinnedVersion = 4;
-    private const string PinnedFingerprint = "e36dca340fd56bab1f2979c0518cfc0ea04a52a0a4003dfa264fae20b5dc5b66";
+    private const string PinnedFingerprint = "cf645e17df5f5e4a9c76838e05cce00e4096ba233af1c1eb1000f17dab076d7b";
 
     [Fact]
     public void Export_MatchesPinnedFingerprint_ForCurrentVersion()

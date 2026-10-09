@@ -3,6 +3,8 @@
 // lint:     stdin [{name, text, format, disable}] -> stdout [{name, format, findings, suppressed, score}]
 // patterns: stdin {patterns:[key], lines:[]} -> stdout {key: [[index, length], ...] per line, or {error}}
 // share:    stdin {encode:[state], decode:[fragment], options} -> stdout {encoded:[fragment], decoded:[result]}
+// time-patterns: stdin [{key, text}] -> stdout [ms]   best of 3 after a warm-up, matchAll of the pattern
+// time-lint:     stdin [text] -> stdout [ms]          best of 3 after a warm-up, analyze with format Auto
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { join } from "node:path";
@@ -38,7 +40,30 @@ async function share({ encode, decode, options }) {
   };
 }
 
-const output = mode === "patterns"
+function bestOfThree(action) {
+  action();
+  let best = Infinity;
+  for (let i = 0; i < 3; i++) {
+    const start = performance.now();
+    action();
+    best = Math.min(best, performance.now() - start);
+  }
+  return best;
+}
+
+function timePatterns(items) {
+  return items.map(({ key, text }) => {
+    const p = generated.patterns[key];
+    const re = new RegExp(p.source, p.flags + "g");
+    return bestOfThree(() => [...text.matchAll(re)].length);
+  });
+}
+
+const timeLint = (texts) => texts.map((text) => bestOfThree(() => engine.analyze(text, "Auto", [])));
+
+const output = mode === "time-patterns" ? timePatterns(input)
+  : mode === "time-lint" ? timeLint(input)
+  : mode === "patterns"
   ? Object.fromEntries(input.patterns.map((key) => [key, matchPositions(key, input.lines)]))
   : mode === "share" ? await share(input) : lint(input);
 process.stdout.write(JSON.stringify(output));

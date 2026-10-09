@@ -22,7 +22,7 @@ jobs:
     runs-on: [self-hosted, windows, "${{ vars.RUNNER_LABEL }}"]
     env:
       SITE_PATH: ${{ vars.SITE_PATH }}
-      DB_CONNECTION: ${{ vars.DB_CONNECTION }}
+      DB_CONNECTION: ${{ secrets.DB_CONNECTION }}
       PREVIOUS_PATH: ${{ vars.PREVIOUS_PATH }}
       HEALTH_URL: https://aibysitting.net/health
       HEALTH_RESOLVE: aibysitting.net:443:127.0.0.1
@@ -34,7 +34,7 @@ jobs:
         run: |
           if ([string]::IsNullOrWhiteSpace($env:SITE_PATH)) { throw "Repository variable SITE_PATH is not set." }
           if (-not (Test-Path -LiteralPath $env:SITE_PATH -PathType Container)) { throw "SITE_PATH '$env:SITE_PATH' does not exist." }
-          if ([string]::IsNullOrWhiteSpace($env:DB_CONNECTION)) { throw "Repository variable DB_CONNECTION is not set." }
+          if ([string]::IsNullOrWhiteSpace($env:DB_CONNECTION)) { throw "Repository secret DB_CONNECTION is not set." }
           if ([string]::IsNullOrWhiteSpace($env:PREVIOUS_PATH)) { throw "Repository variable PREVIOUS_PATH is not set." }
           if (-not (Test-Path -LiteralPath $env:PREVIOUS_PATH -PathType Container)) { throw "PREVIOUS_PATH '$env:PREVIOUS_PATH' does not exist." }
           if ((Resolve-Path -LiteralPath $env:PREVIOUS_PATH).Path.TrimEnd('\') -eq (Resolve-Path -LiteralPath $env:SITE_PATH).Path.TrimEnd('\')) { throw "PREVIOUS_PATH must differ from SITE_PATH." }

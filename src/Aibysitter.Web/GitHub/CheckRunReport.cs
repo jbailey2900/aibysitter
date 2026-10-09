@@ -123,6 +123,15 @@ public sealed record CheckRunReport(ReviewConclusion Conclusion, string Title, s
         return new CheckRunReport(conclusion, title, summary.ToString().TrimEnd(), annotations);
     }
 
+    public const string TimeoutSummary = "Review stopped: a check exceeded the 1 second pattern limit on this pull request's content.";
+
+    /// <summary>A pattern hit the regex match timeout. Neutral, like other review failures.</summary>
+    public static CheckRunReport ForTimeout() => new(
+        ReviewConclusion.Neutral,
+        "Review failed",
+        TimeoutSummary,
+        []);
+
     public static CheckRunReport ForError(Exception ex) => new(
         ReviewConclusion.Neutral,
         "Review failed",

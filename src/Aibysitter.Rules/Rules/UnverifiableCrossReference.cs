@@ -38,6 +38,6 @@ public sealed partial class UnverifiableCrossReference : IRule
     private static partial Regex ReferenceRegex();
 
     /// <summary>A markdown link, inline code, or a quoted / bold section name on the line counts as a target.</summary>
-    [GeneratedRegex(@"\]\([^)]+\)|`[^`]+`|""[^""]+""|“[^”]+”|\*\*[^*]+\*\*")]
+    [GeneratedRegex(@"\]\([^)\]]+\)|`[^`]+`|""[^""]+""|“[^“”]+”|\*\*[^*]+\*\*")]
     private static partial Regex AnchorRegex();
 }

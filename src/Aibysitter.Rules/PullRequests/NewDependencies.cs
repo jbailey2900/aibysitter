@@ -144,7 +144,7 @@ public sealed partial class NewDependencies : IPullRequestCheck
     [GeneratedRegex(@"^\s*(?<name>[A-Za-z0-9][A-Za-z0-9._-]*)\s*(?:\[[^\]]*\])?\s*(?:[=<>!~;@]|$)")]
     private static partial Regex RequirementRegex();
 
-    [GeneratedRegex(@"^\s*(?:require\s+)?(?<name>[\w.-]+\.[\w.-]+/[\w./-]+)\s+v\d")]
+    [GeneratedRegex(@"^\s*(?:require\s+)?(?<name>[\w-]+(?:\.[\w-]+)+/[\w./-]+)\s+v\d")]
     private static partial Regex GoRequireRegex();
 
     [GeneratedRegex(@"^\s*""(?<key>[^""]+)""\s*:\s*\{\s*$")]

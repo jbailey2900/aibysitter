@@ -30,6 +30,6 @@ public sealed partial class PersonaPreamble : IRule
     [GeneratedRegex(@"\b(?:you\s+are|you're|act\s+as|acting\s+as|behave\s+as|pretend\s+to\s+be|imagine\s+you\s+are)\s+(?:a|an|the)\s+(?:\w+[\s-]+){0,3}?(?:expert|senior|principal|staff|lead|world[\s-]class|seasoned|experienced|veteran|elite|10x|genius|master|guru|ninja|rockstar)\b", RegexOptions.IgnoreCase)]
     private static partial Regex PersonaRegex();
 
-    [GeneratedRegex(@"""[^""]*""|“[^”]*”")]
+    [GeneratedRegex(@"""[^""]*""|“[^“”]*”")]
     private static partial Regex QuotedRegex();
 }

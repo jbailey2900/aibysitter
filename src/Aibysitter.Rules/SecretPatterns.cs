@@ -80,12 +80,12 @@ public static partial class SecretPatterns
     [GeneratedRegex(@"\bAIza[0-9A-Za-z_-]{35}\b")]
     private static partial Regex GoogleKeyRegex();
 
-    [GeneratedRegex(@"\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}")]
+    [GeneratedRegex(@"(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}")]
     private static partial Regex JwtRegex();
 
     [GeneratedRegex(@"\b(?:Password|Pwd)\s*=\s*(?<v>[^;\s""'`]{4,})", RegexOptions.IgnoreCase)]
     private static partial Regex ConnectionPasswordRegex();
 
-    [GeneratedRegex(@"\b[a-z][a-z0-9+.-]*://[^\s:/@]+:(?<v>[^\s:/@]{4,})@(?!(?:localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|\[::1\])\b)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<![a-z0-9+.-])[a-z][a-z0-9+.-]*://[^\s:/@]+:(?<v>[^\s:/@]{4,})@(?!(?:localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|\[::1\])\b)", RegexOptions.IgnoreCase)]
     private static partial Regex UrlCredentialsRegex();
 }

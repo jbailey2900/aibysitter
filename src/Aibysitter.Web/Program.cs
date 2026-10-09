@@ -10,6 +10,8 @@ using Aibysitter.Web.Seo;
 using Aibysitter.Web.Stats;
 using Serilog;
 
+RegexTimeout.Apply();
+
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateLogger();

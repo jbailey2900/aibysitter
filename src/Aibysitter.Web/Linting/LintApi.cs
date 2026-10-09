@@ -43,9 +43,19 @@ public static class LintApi
             return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Request body is not valid JSON.");
         }
 
-        return Validate(request, lint, out var format, out var disabled) is { } errors
-            ? Results.ValidationProblem(errors)
-            : Results.Json(lint.Lint(request!.Content!, format, disabled, "api").Report, Json);
+        if (Validate(request, lint, out var format, out var disabled) is { } errors)
+        {
+            return Results.ValidationProblem(errors);
+        }
+
+        try
+        {
+            return Results.Json(lint.Lint(request!.Content!, format, disabled, "api").Report, Json);
+        }
+        catch (LintTimeoutException ex)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status422UnprocessableEntity, title: ex.Message);
+        }
     }
 
     /// <summary>Body bytes, or null when over <see cref="MaxBodyBytes"/>.</summary>

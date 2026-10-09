@@ -81,7 +81,7 @@ public sealed partial class VagueVerbs : IRule
     private static partial Regex ImperativeRegex();
 
     /// <summary>Qualifiers. "where / when / if / as appropriate" is a hedge (R007), not matched here.</summary>
-    [GeneratedRegex(@"(?<!\b(?:where|when|if|as|whenever|more|most|less|least)\s+)(?<!-)\b(?:properly|appropriate(?:ly)?|as\s+needed)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(?=properly|appropriate|as\s+needed)(?<!\b(?:where|when|if|as|whenever|more|most|less|least)\s+)(?<!-)(?:properly|appropriate(?:ly)?|as\s+needed)\b", RegexOptions.IgnoreCase)]
     private static partial Regex QualifierRegex();
 
     /// <summary>

@@ -30,9 +30,14 @@ const replace = (key, s, by) => s.replace(rx(key, "g"), by);
 // .NET char.IsWhiteSpace, string.Trim, IsNullOrWhiteSpace, ToLowerInvariant.
 const WS = /[\t\n\v\f\r\x85\p{Z}]/u;
 const LEAD_WS = /^[\t\n\v\f\r\x85\p{Z}]+/u;
-const TRAIL_WS = /[\t\n\v\f\r\x85\p{Z}]+$/u;
 const trimStart = (s) => s.replace(LEAD_WS, "");
-const trimEnd = (s) => s.replace(TRAIL_WS, "");
+
+// A loop, not /[…]+$/: a regex retries from every whitespace run and is quadratic on long non-trailing runs.
+function trimEnd(s) {
+  let end = s.length;
+  while (end > 0 && WS.test(s[end - 1])) end--;
+  return end === s.length ? s : s.slice(0, end);
+}
 const trim = (s) => trimEnd(trimStart(s));
 const isBlank = (s) => trim(s).length === 0;
 
@@ -135,7 +140,8 @@ function parseBody(raw, lineCount, first, lines) {
       lines.push(makeLine(number, text, false, true));
       continue;
     }
-    const heading = !inFence && test("RulesFile.HeadingRegex", text);
+    const headingMatch = inFence ? null : match("RulesFile.HeadingRegex", text);
+    const heading = headingMatch !== null && headingMatch[2] !== undefined;
     lines.push(makeLine(number, text, heading, inFence));
   }
   return inFence ? fenceOpenLine : null;

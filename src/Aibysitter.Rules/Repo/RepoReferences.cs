@@ -269,13 +269,13 @@ public static partial class RepoReferences
     [GeneratedRegex(@"`([^`]+)`")]
     private static partial Regex CodeSpanRegex();
 
-    [GeneratedRegex(@"\]\(\s*(?!https?:|mailto:|#)([^)\s]+)\s*\)")]
+    [GeneratedRegex(@"\]\(\s*(?!https?:|mailto:|#)([^)\s\]]+)\s*\)")]
     private static partial Regex LinkTargetRegex();
 
-    [GeneratedRegex(@"\[([^\]]*)\]\([^)]*\)")]
+    [GeneratedRegex(@"\[([^\[\]]*)\]\([^)\[]*\)")]
     private static partial Regex LinkRegex();
 
-    [GeneratedRegex(@"\b[a-z][a-z0-9+.-]*://\S+", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<![a-z0-9+.-])[a-z][a-z0-9+.-]*://\S+", RegexOptions.IgnoreCase)]
     private static partial Regex UrlRegex();
 
     /// <summary>Relative paths with at least one slash, outside code spans.</summary>
@@ -304,7 +304,7 @@ public static partial class RepoReferences
     private static partial Regex TrailingCommentRegex();
 
     /// <summary>Shell separators. A bare ';' (no following space) is left alone: MSBuild uses it in -t:A;B.</summary>
-    [GeneratedRegex(@"\s*(?:&&|\|\||\|)\s*|;\s+")]
+    [GeneratedRegex(@"(?<!\s)\s*(?:&&|\|\||\|)\s*|;\s+")]
     private static partial Regex CommandSplitRegex();
 
     [GeneratedRegex(@"^(?<runner>npm|pnpm|yarn|bun)(?:\s+(?:--?[\w-]+(?:=\S+)?|-[A-Za-z]))*\s+(?:(?<run>run(?:-script)?)\s+)?(?<name>[\w:.@/-]+)")]
