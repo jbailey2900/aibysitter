@@ -10,6 +10,13 @@ namespace Aibysitter.Web.Seo;
 /// <summary>llms.txt (llmstxt.org): H1, summary blockquote, then H2 sections of links. Rules come from the docs.</summary>
 public static class LlmsTxt
 {
+    public const string CliUrl = "https://www.nuget.org/packages/Aibysitter.Cli";
+
+    public const string ActionUrl = "https://github.com/marketplace/actions/aibysitter-rules-lint";
+
+    /// <summary>The only links outside the site.</summary>
+    public static IReadOnlyList<string> ExternalLinks { get; } = [CliUrl, ActionUrl];
+
     public static string Build(SiteOptions site, PackCatalog packs)
     {
         var text = new StringBuilder();
@@ -23,6 +30,8 @@ public static class LlmsTxt
         Link(text, site, "Hooks", "/Hooks", "Git pre-commit and Claude Code hooks that run the aibysitter CLI on rules files");
         Link(text, site, "GitHub App", "/GitHub", "checks on agent-authored pull requests; install at " + Aibysitter.Web.GitHub.GitHubAppLinks.InstallUrl);
         Link(text, site, "Config generator", "/GitHub/Config", $"builds {RepoConfig.FilePath} for the GitHub App");
+        text.Append($"- [CLI]({CliUrl}): `dotnet tool install --global Aibysitter.Cli` (nuget.org); lint, fix, init from packs\n");
+        text.Append($"- [GitHub Action]({ActionUrl}): `jbailey2900/aibysitter@v1`, Marketplace `aibysitter-rules-lint`\n");
         text.Append('\n');
 
         text.Append("## Rules packs\n\n");

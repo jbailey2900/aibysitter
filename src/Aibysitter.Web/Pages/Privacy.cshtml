@@ -22,10 +22,10 @@
 
 <h2>GitHub App</h2>
 <ul>
-    <li>Reads, at the pull request's head commit: the changed files and their diff, rules files, and <code>.github/aibysitter.json</code>. For R006 it also reads the repository file list and the manifests a rules file refers to (<code>package.json</code>, Makefiles, <code>.gitignore</code>, MSBuild files).</li>
-    <li>Holds a queue file for the duration of a review: repository, pull request number, commit, check run ID and delivery ID. It is deleted when the review completes.</li>
-    <li>Stores nothing else. Logs record repository, pull request number, commit, delivery ID and finding count for 14 days. No file contents are logged.</li>
-    <li>Results are posted to GitHub as a check run on the pull request.</li>
+    <li>Reads, at the pull request's head commit: the changed files and their diff, and rules files; and <code>.github/aibysitter.json</code> from the base commit. For R006 it also reads the repository file list and the manifests a rules file refers to (<code>package.json</code>, Makefiles, <code>.gitignore</code>, MSBuild files).</li>
+    <li>Holds a queue file for the duration of a review: installation ID, repository, pull request number, head and base commits, check run ID and delivery ID. It is deleted when the review completes.</li>
+    <li>Stores nothing else. Logs record repository, pull request number, short commit SHA, delivery and check run IDs, finding count and any error text for 14 days. No file contents are logged.</li>
+    <li>Results are posted to GitHub as a check run on the pull request, and as one comment when the config sets <code>comment</code>.</li>
 </ul>
 
 <h3>Permissions</h3>
@@ -51,7 +51,7 @@
         <tr>
             <td>Contents</td>
             <td>Read</td>
-            <td>Reading files at the head commit</td>
+            <td>Reading files at the head commit and the config at the base commit</td>
         </tr>
         <tr>
             <td>Metadata</td>

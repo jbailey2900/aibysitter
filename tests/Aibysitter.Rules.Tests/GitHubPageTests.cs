@@ -83,7 +83,7 @@ public class GitHubPageTests(WebApplicationFactory<Program> factory)
         var section = html[html.IndexOf("<h2>Security model</h2>", StringComparison.Ordinal)..];
         section = section[..section.IndexOf("</section>", StringComparison.Ordinal)];
 
-        Assert.Contains("<li>Permissions: Checks (read and write), Pull requests (read and write, used only for the <code>comment</code> option), Contents (read). It cannot push, merge, or change settings.</li>", section);
+        Assert.Contains("<li>Permissions: Checks (read and write), Pull requests (read and write; write is used only for the <code>comment</code> option), Contents (read). It cannot push, merge, or change settings.</li>", section);
         Assert.DoesNotContain("only write permission", section);
         Assert.Contains("Checks (read and write), Pull requests (read and write), Contents (read)", File.ReadAllText(Path.Combine(Parity.NodeRunner.RepoRoot, "docs", "installing-on-your-repos.md")));
     }
