@@ -85,7 +85,7 @@ All config keys, read from the pull request's base branch:
 ```
 
 - `scope`: path globs from the repo root. `**` must be a whole segment; `{a,b}`, `[...]`, `!` and `\` are rejected. Turns on P004, and is read only by P004. Not set: P004 is off.
-- `conclusion`: `fail-on-warnings` fails the check on any Warning or Error finding (P014: Error only) or config error. `fail-on-errors` fails it on any Error finding or config error. `advisory` (default) reports findings as neutral.
+- `conclusion`: `fail-on-warnings` fails the check on any Warning or Error finding (P014: Error only) or config error. `fail-on-errors` fails it on any Error finding or config error. `advisory` (default) reports findings as neutral. Review failed is `failure` under `fail-on-warnings` and `fail-on-errors`.
 - `disable`: check IDs to skip, and rule IDs (R001–R016) to skip inside P014.
 - `ignore`: path globs, or `{ "paths": [...], "checks": [...] }`, skipped by content checks (not P004, P008, P011, P013, P014).
 - The config is read from the base branch; a pull request that changes it is reviewed with the base version.
