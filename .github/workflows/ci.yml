@@ -53,6 +53,60 @@ jobs:
         if: failure()
         run: python3 .github/scripts/annotate-trx.py
 
+  smoke:
+    runs-on: ubuntu-latest
+    # Browser smoke suite against a local site: no SQL Server, no GitHub, no network beyond localhost.
+    env:
+      AIBYSITTER_SMOKE_URL: http://127.0.0.1:5080
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Browser
+        run: google-chrome --version
+
+      - name: Restore
+        run: dotnet restore Aibysitter.slnx
+
+      - name: Build
+        run: dotnet build Aibysitter.slnx --no-restore --configuration Release -warnaserror
+
+      - name: Publish site
+        run: dotnet publish src/Aibysitter.Web --no-build --configuration Release --output site
+
+      - name: Start site
+        working-directory: site
+        env:
+          ASPNETCORE_ENVIRONMENT: Smoke
+          ASPNETCORE_URLS: http://127.0.0.1:5080
+          RateLimiting__Lint__PermitLimit: "1000"
+        run: |
+          nohup dotnet Aibysitter.Web.dll > ../site.log 2>&1 &
+          echo $! > ../site.pid
+          for i in $(seq 1 30); do
+            if curl -sf "$AIBYSITTER_SMOKE_URL/health" > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "::error::Site did not answer /health within 60 s"
+          cat ../site.log
+          exit 1
+
+      - name: Smoke tests
+        run: dotnet test tests/Aibysitter.Web.Smoke --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=smoke.trx" --results-directory TestResults
+
+      - name: Annotate failed tests
+        if: failure()
+        run: python3 .github/scripts/annotate-trx.py
+
+      - name: Stop site
+        if: always()
+        run: |
+          if [ -f site.pid ]; then kill "$(cat site.pid)" || true; fi
+          if [ -f site.log ] && [ "${{ job.status }}" != "success" ]; then tail -n 100 site.log; fi
+
   catalogs-windows:
     runs-on: windows-latest
     steps:

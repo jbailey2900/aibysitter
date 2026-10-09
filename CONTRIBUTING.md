@@ -4,6 +4,7 @@
 - Requirements: .NET 10 SDK; Node.js on `PATH` for the browser parity tests.
 - Run: `dotnet test Aibysitter.slnx`
 - SQL Server tests run when `AIBYSITTER_TEST_SQL` holds a connection string, and are skipped otherwise. In CI they and the parity tests are required.
+- Browser smoke tests (`tests/Aibysitter.Web.Smoke`) run when `AIBYSITTER_SMOKE_URL` names a running site, and are skipped otherwise. Start the site with `ASPNETCORE_ENVIRONMENT=Smoke` and `RateLimiting__Lint__PermitLimit=1000`. The browser is the installed Google Chrome, or the Chromium executable in `AIBYSITTER_SMOKE_BROWSER`. Requests outside localhost fail the test. CI job: `smoke`.
 
 ## Pull requests
 - Every pull request gets CI and the Aibysitter GitHub App's check, `Aibysitter review`.
