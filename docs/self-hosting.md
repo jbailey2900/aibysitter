@@ -57,6 +57,12 @@ Without `ConnectionStrings__Aibysitter` the site runs with score history off: no
 - SSL/TLS mode Full (strict), with a Cloudflare Origin CA certificate on the IIS bindings.
 - Firewall: inbound 443 limited to Cloudflare IP ranges.
 - WAF/bot rules: skip `/github/webhook`, or GitHub deliveries are challenged.
+- Recommended: per-hostname Authenticated Origin Pulls with your own client certificate. Without it, any Cloudflare zone pointed at the origin IP passes the firewall and skips this zone's WAF rules. Zone-level Authenticated Origin Pulls uses a certificate shared by all Cloudflare zones and does not prevent this.
+  1. Create a client certificate and private key, with a CA you control.
+  2. Upload them under **SSL/TLS → Origin Server → Authenticated Origin Pulls** as a per-hostname certificate for each host name, and turn the setting on for those host names.
+  3. On the server, import the CA certificate into **Local Computer → Trusted Root Certification Authorities**.
+  4. In IIS, **SSL Settings** for the site: **Require SSL**, client certificates **Require**.
+  5. Accept only that CA: import it into **Local Computer → Client Authentication Issuers** as well, and set `sslctlstorename=ClientAuthIssuer` on each host name's binding with `netsh http update sslcert hostnameport=<host>:443`. Without this, IIS accepts a client certificate from any trusted CA.
 
 Behind a different proxy: replace the `ForwardedHeaders:KnownNetworks` list in `appsettings.json` with that proxy's ranges. With no proxy, the default list can stay; `X-Forwarded-For` is honored only from listed ranges.
 

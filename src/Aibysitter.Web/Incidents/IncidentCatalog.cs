@@ -131,7 +131,7 @@ public sealed partial class IncidentCatalog
         }
 
         var source = meta.GetValueOrDefault("source") is { Length: > 0 } s ? s : null;
-        if (source is not null && !source.StartsWith('/') && !source.StartsWith("https://", StringComparison.Ordinal))
+        if (source is not null && !IsSitePath(source) && !source.StartsWith("https://", StringComparison.Ordinal))
         {
             errors.Add($"{name}: source must be an https URL or a site path");
         }
@@ -203,6 +203,9 @@ public sealed partial class IncidentCatalog
 
         errors.AddRange(empty.Select(h => $"{name}: section \"{h}\" is empty"));
     }
+
+    /// <summary>A root-relative path on this site; <c>//host</c> and <c>/\host</c> are off-site in browsers.</summary>
+    private static bool IsSitePath(string source) => source.StartsWith('/') && !source.StartsWith("//", StringComparison.Ordinal) && !source.StartsWith("/\\", StringComparison.Ordinal);
 
     [GeneratedRegex(@"^(?<id>\d{4})-(?<slug>[a-z0-9]+(?:-[a-z0-9]+)*)\.md$")]
     private static partial Regex FileNameRegex();

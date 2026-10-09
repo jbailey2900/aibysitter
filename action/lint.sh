@@ -149,6 +149,9 @@ findings=$(jq -r '[.files[].findings | length] | add // 0' "$out/report.json")
 } >> "$GITHUB_STEP_SUMMARY"
 
 for e in ${errors[@]+"${errors[@]}"}; do
+  e=${e//\%/%25}
+  e=${e//$'\r'/%0D}
+  e=${e//$'\n'/%0A}
   echo "::error title=aibysitter::$e"
 done
 exit 0

@@ -9,9 +9,8 @@ public static class RegistryEndpoints
 
     public static IEndpointRouteBuilder MapRegistry(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapGet("/registry.json", (HttpContext http, GalleryCatalog catalog) =>
+        endpoints.MapGet("/registry.json", (HttpContext http, GalleryCatalog catalog, Infrastructure.SiteOptions site) =>
         {
-            var origin = $"{http.Request.Scheme}://{http.Request.Host}";
             http.Response.Headers[HeaderNames.CacheControl] = "public, max-age=300";
             return Results.Json(new
             {
@@ -31,9 +30,9 @@ public static class RegistryEndpoints
                     lines = e.Lines.Count,
                     score = e.Score.Value,
                     grade = e.Score.Grade,
-                    pageUrl = $"{origin}/Gallery/{e.Id}",
-                    downloadUrl = $"{origin}{e.DownloadPath}",
-                    badgeUrl = $"{origin}{e.BadgePath}",
+                    pageUrl = site.Url($"/Gallery/{e.Id}"),
+                    downloadUrl = site.Url(e.DownloadPath),
+                    badgeUrl = site.Url(e.BadgePath),
                 }),
             });
         });

@@ -20,7 +20,15 @@ public sealed class ReviewWorker(
     {
         await foreach (var job in queue.ReadAllAsync(stoppingToken))
         {
-            await RunAsync(job, stoppingToken);
+            try
+            {
+                await RunAsync(job, stoppingToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !stoppingToken.IsCancellationRequested)
+            {
+                // A job store error (permissions, a locked file) must not stop the worker; the job file is kept for the next start.
+                logger.LogError(ex, "Review job {DeliveryId} for {PullRequest} failed outside the review; worker continues", job.DeliveryId, job.PullRequest);
+            }
         }
     }
 

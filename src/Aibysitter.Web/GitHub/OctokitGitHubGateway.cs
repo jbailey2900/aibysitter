@@ -21,23 +21,23 @@ public sealed class OctokitGitHubGateway(IOptions<GitHubOptions> options, TimePr
 
     public async Task<long> CreateQueuedCheckRunAsync(PullRequestRef pr, CancellationToken cancellationToken)
     {
-        var client = await ClientAsync(pr.InstallationId);
+        var client = await ClientAsync(pr.InstallationId, cancellationToken);
         var run = await client.Check.Run.Create(pr.Owner, pr.Repo, new NewCheckRun(GitHubOptions.CheckRunName, pr.HeadSha)
         {
             Status = CheckStatus.Queued,
-        });
+        }).WaitAsync(cancellationToken);
         return run.Id;
     }
 
     public async Task MarkInProgressAsync(PullRequestRef pr, long checkRunId, CancellationToken cancellationToken)
     {
-        var client = await ClientAsync(pr.InstallationId);
+        var client = await ClientAsync(pr.InstallationId, cancellationToken);
         await CheckRunRetry.RunAsync(
             () => client.Check.Run.Update(pr.Owner, pr.Repo, checkRunId, new CheckRunUpdate
             {
                 Status = CheckStatus.InProgress,
                 StartedAt = time.GetUtcNow(),
-            }),
+            }).WaitAsync(cancellationToken),
             checkRunId,
             time,
             logger,
@@ -46,27 +46,27 @@ public sealed class OctokitGitHubGateway(IOptions<GitHubOptions> options, TimePr
 
     public async Task<IReadOnlyList<ChangedFile>> GetChangedFilesAsync(PullRequestRef pr, CancellationToken cancellationToken)
     {
-        var client = await ClientAsync(pr.InstallationId);
-        var files = await client.PullRequest.Files(pr.Owner, pr.Repo, pr.Number);
+        var client = await ClientAsync(pr.InstallationId, cancellationToken);
+        var files = await client.PullRequest.Files(pr.Owner, pr.Repo, pr.Number).WaitAsync(cancellationToken);
         return files.Select(f => new ChangedFile(f.FileName, MapStatus(f.Status), f.Patch, f.PreviousFileName)).ToList();
     }
 
     public Task<FileContent?> GetFileContentAsync(PullRequestRef pr, string path, CancellationToken cancellationToken) =>
-        ContentAtAsync(pr, path, pr.HeadSha);
+        ContentAtAsync(pr, path, pr.HeadSha, cancellationToken);
 
     public Task<FileContent?> GetBaseFileContentAsync(PullRequestRef pr, string path, CancellationToken cancellationToken) =>
-        ContentAtAsync(pr, path, pr.BaseSha ?? throw new InvalidOperationException($"{pr} has no base commit."));
+        ContentAtAsync(pr, path, pr.BaseSha ?? throw new InvalidOperationException($"{pr} has no base commit."), cancellationToken);
 
     /// <summary>
     /// Contents API: the size comes with the content, so files over <see cref="FileContent.MaxFileBytes"/> are not decoded.
     /// GitHub omits the content of files over 1 MB. Directories and submodules return null.
     /// </summary>
-    private async Task<FileContent?> ContentAtAsync(PullRequestRef pr, string path, string sha)
+    private async Task<FileContent?> ContentAtAsync(PullRequestRef pr, string path, string sha, CancellationToken cancellationToken)
     {
-        var client = await ClientAsync(pr.InstallationId);
+        var client = await ClientAsync(pr.InstallationId, cancellationToken);
         try
         {
-            var items = await client.Repository.Content.GetAllContentsByRef(pr.Owner, pr.Repo, path, sha);
+            var items = await client.Repository.Content.GetAllContentsByRef(pr.Owner, pr.Repo, path, sha).WaitAsync(cancellationToken);
             return items is [{ Type.Value: ContentType.File } file]
                 ? FileContent.From(file.Size, () => Convert.FromBase64String(file.EncodedContent ?? ""))
                 : null;
@@ -79,8 +79,8 @@ public sealed class OctokitGitHubGateway(IOptions<GitHubOptions> options, TimePr
 
     public async Task<RepoTree?> GetTreeAsync(PullRequestRef pr, CancellationToken cancellationToken)
     {
-        var client = await ClientAsync(pr.InstallationId);
-        var tree = await client.Git.Tree.GetRecursive(pr.Owner, pr.Repo, pr.HeadSha);
+        var client = await ClientAsync(pr.InstallationId, cancellationToken);
+        var tree = await client.Git.Tree.GetRecursive(pr.Owner, pr.Repo, pr.HeadSha).WaitAsync(cancellationToken);
         if (tree.Truncated)
         {
             return null;
@@ -94,7 +94,7 @@ public sealed class OctokitGitHubGateway(IOptions<GitHubOptions> options, TimePr
 
     public async Task CompleteCheckRunAsync(PullRequestRef pr, long checkRunId, CheckRunReport report, CancellationToken cancellationToken)
     {
-        var client = await ClientAsync(pr.InstallationId);
+        var client = await ClientAsync(pr.InstallationId, cancellationToken);
         var batches = report.AnnotationBatches().ToList();
         if (batches.Count == 0)
         {
@@ -118,7 +118,7 @@ public sealed class OctokitGitHubGateway(IOptions<GitHubOptions> options, TimePr
                 update.CompletedAt = time.GetUtcNow();
             }
 
-            await CheckRunRetry.RunAsync(() => client.Check.Run.Update(pr.Owner, pr.Repo, checkRunId, update), checkRunId, time, logger, cancellationToken);
+            await CheckRunRetry.RunAsync(() => client.Check.Run.Update(pr.Owner, pr.Repo, checkRunId, update).WaitAsync(cancellationToken), checkRunId, time, logger, cancellationToken);
         }
     }
 
@@ -126,7 +126,7 @@ public sealed class OctokitGitHubGateway(IOptions<GitHubOptions> options, TimePr
     {
         if (appSlug is null)
         {
-            var app = await AppClient().GitHubApps.GetCurrent();
+            var app = await AppClient().GitHubApps.GetCurrent().WaitAsync(cancellationToken);
             appSlug = app.Slug;
         }
 
@@ -135,29 +135,29 @@ public sealed class OctokitGitHubGateway(IOptions<GitHubOptions> options, TimePr
 
     public async Task<IReadOnlyList<IssueCommentInfo>> ListIssueCommentsAsync(PullRequestRef pr, CancellationToken cancellationToken)
     {
-        var client = await ClientAsync(pr.InstallationId);
-        var comments = await Forbidden(() => client.Issue.Comment.GetAllForIssue(pr.Owner, pr.Repo, pr.Number));
+        var client = await ClientAsync(pr.InstallationId, cancellationToken);
+        var comments = await Forbidden(() => client.Issue.Comment.GetAllForIssue(pr.Owner, pr.Repo, pr.Number).WaitAsync(cancellationToken));
         return comments.Select(c => new IssueCommentInfo(c.Id, c.User?.Login ?? "", c.Body ?? "", c.CreatedAt)).ToList();
     }
 
     public async Task CreateIssueCommentAsync(PullRequestRef pr, string body, CancellationToken cancellationToken)
     {
-        var client = await ClientAsync(pr.InstallationId);
-        await Forbidden(() => client.Issue.Comment.Create(pr.Owner, pr.Repo, pr.Number, body));
+        var client = await ClientAsync(pr.InstallationId, cancellationToken);
+        await Forbidden(() => client.Issue.Comment.Create(pr.Owner, pr.Repo, pr.Number, body).WaitAsync(cancellationToken));
     }
 
     public async Task UpdateIssueCommentAsync(PullRequestRef pr, long commentId, string body, CancellationToken cancellationToken)
     {
-        var client = await ClientAsync(pr.InstallationId);
-        await Forbidden(() => client.Issue.Comment.Update(pr.Owner, pr.Repo, commentId, body));
+        var client = await ClientAsync(pr.InstallationId, cancellationToken);
+        await Forbidden(() => client.Issue.Comment.Update(pr.Owner, pr.Repo, commentId, body).WaitAsync(cancellationToken));
     }
 
     public async Task DeleteIssueCommentAsync(PullRequestRef pr, long commentId, CancellationToken cancellationToken)
     {
-        var client = await ClientAsync(pr.InstallationId);
+        var client = await ClientAsync(pr.InstallationId, cancellationToken);
         await Forbidden(async () =>
         {
-            await client.Issue.Comment.Delete(pr.Owner, pr.Repo, commentId);
+            await client.Issue.Comment.Delete(pr.Owner, pr.Repo, commentId).WaitAsync(cancellationToken);
             return true;
         });
     }
@@ -184,20 +184,29 @@ public sealed class OctokitGitHubGateway(IOptions<GitHubOptions> options, TimePr
         }
     }
 
-    private GitHubClient AppClient() => new(Product)
+    /// <summary>Per-request timeout for every GitHub API call (Octokit's default is 100 s).</summary>
+    public static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(30);
+
+    private GitHubClient AppClient() => WithTimeout(new GitHubClient(Product)
     {
         Credentials = new Credentials(AppJwt.Create(options.Value.AppId!, privateKey.Value, time.GetUtcNow()), AuthenticationType.Bearer),
-    };
+    });
 
-    private async Task<IGitHubClient> ClientAsync(long installationId)
+    internal static GitHubClient WithTimeout(GitHubClient client)
+    {
+        client.SetRequestTimeout(RequestTimeout);
+        return client;
+    }
+
+    private async Task<IGitHubClient> ClientAsync(long installationId, CancellationToken cancellationToken)
     {
         if (!tokens.TryGetValue(installationId, out var token) || token.ExpiresAt - time.GetUtcNow() < TokenRefreshMargin)
         {
-            token = await AppClient().GitHubApps.CreateInstallationToken(installationId);
+            token = await AppClient().GitHubApps.CreateInstallationToken(installationId).WaitAsync(cancellationToken);
             tokens[installationId] = token;
         }
 
-        return new GitHubClient(Product) { Credentials = new Credentials(token.Token) };
+        return WithTimeout(new GitHubClient(Product) { Credentials = new Credentials(token.Token) });
     }
 
     /// <summary>Annotation text limits; GitHub allows 64 KB for message and raw details and 255 characters for the title.</summary>

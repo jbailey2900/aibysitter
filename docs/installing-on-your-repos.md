@@ -114,7 +114,7 @@ Precedence: comments in the file, then rule IDs in `disable`, then `"disable": [
 | Check stays **Queued** | The review is waiting behind others, or the server is restarting | Wait a few minutes. Still queued: push a commit. App owner: redeliver the webhook (App settings → Advanced → Recent deliveries) |
 | Summary says "Not read (over 100 KB)" or "Not read (not UTF-8)" | The App reads files up to 100 KB of UTF-8 text | None; checks that read file contents skip those files, diff checks still run |
 | Summary says "Not read (2 MB review limit reached)" | The App reads at most 2 MB of file content per review | Split the pull request |
-| Check completes as **Review failed** | A GitHub API error, or a check hit the 1-second pattern limit | Push a new commit. App owner: redeliver the webhook |
+| Check completes as **Review failed** | A GitHub API error, a check hit the 1-second pattern limit, or the review ran over 90 seconds | Push a new commit. App owner: redeliver the webhook |
 | Summary says "R006 skipped" | The repository file list is too large for one GitHub request | None; R006 does not run on that repository |
 | Unexpected P004 findings | `scope` does not cover the path | Add the glob to `scope`, or remove `scope` |
 | Summary says "PR comment not posted: the App needs Pull requests: Read and write" | The installation has not accepted the updated permissions | Accept the pending permission request under **Configure** for Aibysitter |

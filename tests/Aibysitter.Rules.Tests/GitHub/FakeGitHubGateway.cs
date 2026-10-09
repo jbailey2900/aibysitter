@@ -27,6 +27,9 @@ internal sealed class FakeGitHubGateway : IGitHubGateway
 
     public Exception? ThrowOnFiles { get; set; }
 
+    /// <summary>The file list never arrives; the call ends only when its token is cancelled.</summary>
+    public bool HangOnFiles { get; set; }
+
     public Exception? ThrowOnComplete { get; set; }
 
     public Exception? ThrowOnInProgress { get; set; }
@@ -60,6 +63,11 @@ internal sealed class FakeGitHubGateway : IGitHubGateway
     public Task<IReadOnlyList<ChangedFile>> GetChangedFilesAsync(PullRequestRef pr, CancellationToken cancellationToken)
     {
         Calls.Enqueue("files");
+        if (HangOnFiles)
+        {
+            return Task.Delay(Timeout.Infinite, cancellationToken).ContinueWith<IReadOnlyList<ChangedFile>>(_ => throw new OperationCanceledException(cancellationToken), TaskScheduler.Default);
+        }
+
         return ThrowOnFiles is null ? Task.FromResult<IReadOnlyList<ChangedFile>>(Files) : Task.FromException<IReadOnlyList<ChangedFile>>(ThrowOnFiles);
     }
 

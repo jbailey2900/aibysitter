@@ -37,11 +37,18 @@ public static class ReviewComment
             if (listed == 0)
             {
                 var link = $"\n\n[View the check run]({CheckRunUrl(pr, checkRunId)})";
-                return body[..(MaxLength - link.Length - 1)] + "…" + link;
+                return CutAtLineEnd(body, MaxLength - link.Length - 2) + "\n…" + link;
             }
 
             listed--;
         }
+    }
+
+    /// <summary>At most <paramref name="max"/> characters, ending at a line end so no code span or surrogate pair is split.</summary>
+    private static string CutAtLineEnd(string text, int max)
+    {
+        var cut = text.LastIndexOf('\n', max);
+        return cut > 0 ? text[..cut] : OctokitGitHubGateway.Clamp(text, max);
     }
 
     private static string Compose(CheckRunReport report, IReadOnlyList<CheckRunAnnotation> findings, PullRequestRef pr, long checkRunId, int listed)

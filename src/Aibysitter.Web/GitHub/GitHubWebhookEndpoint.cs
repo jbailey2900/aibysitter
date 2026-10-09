@@ -32,7 +32,7 @@ public static class GitHubWebhookEndpoint
             return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
         }
 
-        var client = request.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var client = Infrastructure.ClientKey.For(request.HttpContext.Connection.RemoteIpAddress);
         if (limiter.IsExhausted(client))
         {
             return Results.StatusCode(StatusCodes.Status429TooManyRequests);

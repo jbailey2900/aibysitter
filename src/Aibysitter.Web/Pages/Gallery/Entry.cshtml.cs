@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Aibysitter.Web.Pages.Gallery;
 
-public class EntryModel(GalleryCatalog catalog) : PageModel
+public class EntryModel(GalleryCatalog catalog, Infrastructure.SiteOptions site) : PageModel
 {
     public GalleryEntry Entry { get; private set; } = null!;
 
@@ -38,8 +38,7 @@ public class EntryModel(GalleryCatalog catalog) : PageModel
         IsSource = view == SourceView;
         RenderedHtml = MarkdownRenderer.ToHtml(entry.Content, HeadingOffset);
         FrontmatterLines = entry.Lines.Take(RulesFile.Parse(entry.Content).Frontmatter?.EndLine ?? 0).ToList();
-        var origin = $"{Request.Scheme}://{Request.Host}";
-        BadgeMarkdown = $"[![Aibysitter lint score: {entry.Score.Grade} {entry.Score.Value}]({origin}{entry.BadgePath})]({origin}/Gallery/{entry.Id})";
+        BadgeMarkdown = $"[![Aibysitter lint score: {entry.Score.Grade} {entry.Score.Value}]({site.Url(entry.BadgePath)})]({site.Url($"/Gallery/{entry.Id}")})";
         FindingsByLine = entry.Findings.GroupBy(f => f.Finding.Line).ToDictionary(g => g.Key, g => g.ToList());
         return Page();
     }
