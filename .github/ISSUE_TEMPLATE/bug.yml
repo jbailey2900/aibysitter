@@ -37,4 +37,4 @@ body:
     id: version
     attributes:
       label: Ruleset or CLI version
-      placeholder: "ruleset v4, CLI 0.4.1"
+      placeholder: "ruleset v4, CLI 0.4.2"

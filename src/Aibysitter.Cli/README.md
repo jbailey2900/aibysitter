@@ -12,6 +12,6 @@ aibysitter packs
 
 `init` writes a rules file composed from rules packs and prints its score. Packs: [aibysitting.net/Packs](https://aibysitting.net/Packs).
 
-Exit codes: 0 ok, 1 threshold failed, 2 usage error, 3 file not readable or not writable.
+Exit codes: 0 ok, 1 threshold failed, 2 usage error, 3 file not readable or not writable, 4 lint timed out (a pattern ran longer than 1 second).
 
 Rules: [aibysitting.net/Rules](https://aibysitting.net/Rules).

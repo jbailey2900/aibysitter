@@ -9,7 +9,7 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>aibysitter</ToolCommandName>
     <PackageId>Aibysitter.Cli</PackageId>
-    <Version>0.4.1</Version>
+    <Version>0.4.2</Version>
     <Authors>Jon Bailey</Authors>
     <Description>Lints rules files for AI coding agents (CLAUDE.md, AGENTS.md, Cursor rules, Copilot instructions, GEMINI.md, .windsurfrules). Same rules and scoring as aibysitting.net. Runs offline.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -18,6 +18,7 @@
     <PackageIcon>icon.png</PackageIcon>
     <RepositoryUrl>https://github.com/jbailey2900/aibysitter</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageReleaseNotes>0.4.2: Pattern matching stops after 1 second; lint, fix and hook exit 4 with "Linting stopped after 1 second." Linear-time rule patterns. Findings unchanged; ruleset v4.</PackageReleaseNotes>
     <PackageTags>claude-md;agents-md;cursor;copilot;lint;ai-agents</PackageTags>
   </PropertyGroup>
 

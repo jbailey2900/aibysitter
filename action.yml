@@ -21,7 +21,7 @@ inputs:
   cli-version:
     description: Aibysitter.Cli version to install from nuget.org. Empty builds the CLI from the action's source.
     required: false
-    default: "0.4.1"
+    default: "0.4.2"
   token:
     description: Token for the check run. Needs checks write; without it, annotations go to the log.
     required: false
