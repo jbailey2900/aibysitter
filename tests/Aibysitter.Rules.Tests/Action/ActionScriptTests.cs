@@ -224,6 +224,21 @@ public sealed class ActionScriptTests(ITestOutputHelper output) : IDisposable
     }
 
     [Fact]
+    public void ErrorAnnotation_EscapesPercent()
+    {
+        if (!ToolsOrSkip())
+        {
+            return;
+        }
+
+        RepoWith(("CLAUDE.md", Clean));
+
+        var (_, _, _, log) = Lint("CLAUDE.md nope%0A/AGENTS.md");
+
+        Assert.Contains("::error title=aibysitter::nope%250A/AGENTS.md: aibysitter: cannot read nope%250A/AGENTS.md: not found", log);
+    }
+
+    [Fact]
     public void MissingFile_ErrorStatus_ErrorAnnotation()
     {
         if (!ToolsOrSkip())

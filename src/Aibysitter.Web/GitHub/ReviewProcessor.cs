@@ -5,9 +5,12 @@ using Aibysitter.Rules.Rules;
 
 namespace Aibysitter.Web.GitHub;
 
-public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer reviewer, ILogger<ReviewProcessor> logger, Stats.IUsageCounter? usage = null)
+public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer reviewer, ILogger<ReviewProcessor> logger, Stats.IUsageCounter? usage = null, TimeProvider? time = null)
 {
     public const int MaxContentFetches = 100;
+
+    /// <summary>Time limit for one review, GitHub calls included. Over it the check closes as "Review failed".</summary>
+    public static readonly TimeSpan JobBudget = TimeSpan.FromSeconds(90);
 
     /// <summary>Unchanged rules files read for R006 when the PR removes or renames something.</summary>
     public const int MaxUnchangedRulesFiles = 10;
@@ -20,20 +23,23 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
     {
         var pr = job.PullRequest;
         RepoConfig? readConfig = null;
+        using var timeLimit = new CancellationTokenSource(JobBudget, time ?? TimeProvider.System);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeLimit.Token);
+        var reviewToken = linked.Token;
         try
         {
-            await MarkInProgressAsync(job, cancellationToken);
+            await MarkInProgressAsync(job, reviewToken);
 
-            var files = await gateway.GetChangedFilesAsync(pr, cancellationToken);
-            var (config, configErrors, configNote) = await ReadConfigAsync(pr, files, cancellationToken);
+            var files = await gateway.GetChangedFilesAsync(pr, reviewToken);
+            var (config, configErrors, configNote) = await ReadConfigAsync(pr, files, reviewToken);
             readConfig = config;
             var budget = new ContentBudget();
 
             var notes = new List<string>();
-            var tree = await TreeForRulesFilesAsync(pr, files, config, cancellationToken);
+            var tree = await TreeForRulesFilesAsync(pr, files, config, reviewToken);
             if (NeedsTreeForDeletedTests(files, config))
             {
-                tree ??= await gateway.GetTreeAsync(pr, cancellationToken);
+                tree ??= await gateway.GetTreeAsync(pr, reviewToken);
             }
 
             var symlinks = files.Where(f => RulesFileLint.IsRulesFile(f) && tree?.Symlinks.Contains(f.Path) == true).ToList();
@@ -52,11 +58,11 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
             foreach (var file in files)
             {
                 enriched.Add(toFetch.Contains(file.Path)
-                    ? file with { HeadContent = await budget.ReadAsync(file.Path, () => gateway.GetFileContentAsync(pr, file.Path, cancellationToken)) }
+                    ? file with { HeadContent = await budget.ReadAsync(file.Path, () => gateway.GetFileContentAsync(pr, file.Path, reviewToken)) }
                     : file);
             }
 
-            var (repo, unchanged) = await BuildRepoViewAsync(pr, files, enriched, config, tree, notes, budget, cancellationToken);
+            var (repo, unchanged) = await BuildRepoViewAsync(pr, files, enriched, config, tree, notes, budget, reviewToken);
             notes.AddRange(budget.Notes());
 
             var review = reviewer.Review(new PullRequestContext(enriched, config, repo, unchanged, tree?.Paths));
@@ -64,14 +70,14 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
             if (config.Comment)
             {
                 var note = await new ReviewCommentPublisher(gateway, logger)
-                    .PublishAsync(pr, ReviewComment.Build(report, pr, job.CheckRunId), review.Findings.Count > 0, cancellationToken);
+                    .PublishAsync(pr, ReviewComment.Build(report, pr, job.CheckRunId), review.Findings.Count > 0, reviewToken);
                 if (note is not null)
                 {
                     report = report with { Summary = $"{report.Summary}\n\n{note}" };
                 }
             }
 
-            await gateway.CompleteCheckRunAsync(pr, job.CheckRunId, report, cancellationToken);
+            await gateway.CompleteCheckRunAsync(pr, job.CheckRunId, report, reviewToken);
             usage?.Increment(Stats.UsageMetric.Review, report.Conclusion.ToString().ToLowerInvariant());
 
             logger.LogInformation(
@@ -89,7 +95,12 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
             try
             {
                 var conclusion = await ErrorConclusionAsync(pr, readConfig, cancellationToken);
-                var failed = ex is System.Text.RegularExpressions.RegexMatchTimeoutException ? CheckRunReport.ForTimeout(conclusion) : CheckRunReport.ForError(ex, conclusion);
+                var failed = ex switch
+                {
+                    OperationCanceledException when timeLimit.IsCancellationRequested => CheckRunReport.ForBudget(conclusion),
+                    System.Text.RegularExpressions.RegexMatchTimeoutException => CheckRunReport.ForTimeout(conclusion),
+                    _ => CheckRunReport.ForError(ex, conclusion),
+                };
                 await gateway.CompleteCheckRunAsync(pr, job.CheckRunId, failed, cancellationToken);
                 usage?.Increment(Stats.UsageMetric.Review, "error");
                 return true;

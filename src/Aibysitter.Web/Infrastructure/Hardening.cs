@@ -37,7 +37,7 @@ public static class Hardening
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
                 IsLintRequest(context.Request)
                     ? RateLimitPartition.GetFixedWindowLimiter(
-                        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                        ClientKey.For(context.Connection.RemoteIpAddress),
                         _ => new FixedWindowRateLimiterOptions
                         {
                             PermitLimit = lint.PermitLimit,
@@ -46,7 +46,7 @@ public static class Hardening
                         })
                     : IsBadgeRequest(context.Request)
                         ? RateLimitPartition.GetFixedWindowLimiter(
-                            "badge|" + (context.Connection.RemoteIpAddress?.ToString() ?? "unknown"),
+                            "badge|" + ClientKey.For(context.Connection.RemoteIpAddress),
                             _ => new FixedWindowRateLimiterOptions
                             {
                                 PermitLimit = badge.PermitLimit,

@@ -146,8 +146,9 @@ public sealed class RawGitHubFetcher(HttpClient http)
         {
             return new Probe(fileName, ProbeState.TimedOut, null);
         }
-        catch (HttpRequestException)
+        catch (Exception ex) when (ex is HttpRequestException or InvalidDataException or IOException)
         {
+            // InvalidDataException: bad gzip or brotli. IOException: connection lost while reading the body.
             return new Probe(fileName, ProbeState.Failed, null);
         }
     }

@@ -45,6 +45,7 @@ public static class RulesetChangelog
 
     public static IReadOnlyList<ChangelogEntry> AppChecks { get; } =
     [
+        new(null, new DateOnly(2026, 10, 9), "Review time limit (security review)", ["A review stops after 90 seconds, GitHub calls included, and closes as Review failed: failure under fail-on-warnings or fail-on-errors, neutral under advisory.", "Each GitHub API request times out after 30 seconds."]),
         new(null, new DateOnly(2026, 10, 9), "Review errors and read limits (security review)", ["Under fail-on-warnings or fail-on-errors, a review that fails with an error closes the check as failure; advisory stays neutral.", "Files over 100 KB or not UTF-8 are not read, and a review reads at most 2 MB of file content; the summary names the files not read.", "Text from the pull request is escaped in the check summary and the PR comment."]),
         new(null, new DateOnly(2026, 10, 9), "Pattern limits (security review)", ["Glob patterns in scope and ignore hold at most 8 wildcards; .gitignore lines with more are skipped for R006.", "P009: a // comment ends at the line break, so { // comment } on one line is not an empty catch.", "A check that runs past the 1-second pattern limit stops the review; the summary says so."]),
         new(null, new DateOnly(2026, 10, 8), "Repo config: conclusion fail-on-warnings", ["Fails the check on any Warning or Error finding, or a config error. P014 fails only when a rule fires at Error. Info findings never fail the check."]),

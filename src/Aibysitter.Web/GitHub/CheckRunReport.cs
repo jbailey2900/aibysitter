@@ -173,6 +173,12 @@ public sealed record CheckRunReport(ReviewConclusion Conclusion, string Title, s
         TimeoutSummary,
         []);
 
+    public const string BudgetSummary = "Review stopped: it exceeded the 90 second limit.";
+
+    /// <summary>The review ran past <see cref="ReviewProcessor.JobBudget"/>.</summary>
+    /// <param name="conclusion">Failure under a failing conclusion mode; see <see cref="ReviewProcessor"/>.</param>
+    public static CheckRunReport ForBudget(ReviewConclusion conclusion) => new(conclusion, "Review failed", BudgetSummary, []);
+
     /// <param name="conclusion">Failure under a failing conclusion mode; Neutral where no config is known (worker, webhook).</param>
     public static CheckRunReport ForError(Exception ex, ReviewConclusion conclusion = ReviewConclusion.Neutral) => new(
         conclusion,

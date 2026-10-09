@@ -10,6 +10,17 @@ public class ReleaseWorkflowTests
     private static string ReleaseCli => File.ReadAllText(Path.Combine(WorkflowsDir, "release-cli.yml"));
 
     [Fact]
+    public void ServiceImages_PinnedByDigest()
+    {
+        var images = Directory.GetFiles(WorkflowsDir, "*.yml")
+            .SelectMany(f => File.ReadLines(f).Where(l => l.TrimStart().StartsWith("image:", StringComparison.Ordinal)).Select(l => (File: Path.GetFileName(f), Line: l.Trim())))
+            .ToList();
+
+        Assert.NotEmpty(images);
+        Assert.All(images, i => Assert.Matches(@"^image: \S+:\S+@sha256:[0-9a-f]{64}$", i.Line));
+    }
+
+    [Fact]
     public void ReleaseCli_RunsOnCliTagsOnly()
     {
         Assert.Contains("on:\n  push:\n    tags: [\"cli-v*\"]\n", ReleaseCli, StringComparison.Ordinal);

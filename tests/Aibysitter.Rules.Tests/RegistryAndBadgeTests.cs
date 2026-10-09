@@ -32,9 +32,9 @@ public class RegistryAndBadgeTests(WebApplicationFactory<Program> factory)
         Assert.Equal("AGENTS.md", go.GetProperty("file").GetString());
         Assert.Equal("CC0-1.0", go.GetProperty("license").GetString());
         Assert.Equal(expected.Lines.Count, go.GetProperty("lines").GetInt32());
-        Assert.Equal("http://localhost/Gallery/go-http-service", go.GetProperty("pageUrl").GetString());
-        Assert.Equal("http://localhost/gallery/go-http-service/AGENTS.md", go.GetProperty("downloadUrl").GetString());
-        Assert.Equal("http://localhost/gallery/go-http-service/badge.svg", go.GetProperty("badgeUrl").GetString());
+        Assert.Equal("https://aibysitting.net/Gallery/go-http-service", go.GetProperty("pageUrl").GetString());
+        Assert.Equal("https://aibysitting.net/gallery/go-http-service/AGENTS.md", go.GetProperty("downloadUrl").GetString());
+        Assert.Equal("https://aibysitting.net/gallery/go-http-service/badge.svg", go.GetProperty("badgeUrl").GetString());
     }
 
     [Fact]
@@ -93,6 +93,6 @@ public class RegistryAndBadgeTests(WebApplicationFactory<Program> factory)
         var html = await factory.CreateClient().GetStringAsync("/Gallery/monorepo-root");
 
         Assert.Contains("<img src=\"/gallery/monorepo-root/badge.svg\"", html);
-        Assert.Contains("[![Aibysitter lint score: A 100](http://localhost/gallery/monorepo-root/badge.svg)](http://localhost/Gallery/monorepo-root)", html);
+        Assert.Contains("[![Aibysitter lint score: A 100](https://aibysitting.net/gallery/monorepo-root/badge.svg)](https://aibysitting.net/Gallery/monorepo-root)", html);
     }
 }

@@ -99,6 +99,37 @@ public class HardeningTests(WebApplicationFactory<Program> factory)
     }
 
     [Fact]
+    public async Task Ipv6_OneBucketPer64()
+    {
+        var client = CreateClient(permitLimit: 1);
+
+        Assert.NotEqual(HttpStatusCode.TooManyRequests, (await PostLint(client, "2001:db8:1:2::1")).StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await PostLint(client, "2001:db8:1:2:ffff:ffff:ffff:fffe")).StatusCode);
+        Assert.NotEqual(HttpStatusCode.TooManyRequests, (await PostLint(client, "2001:db8:1:3::1")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Ipv6_WebhookFailedSignatures_OneBucketPer64()
+    {
+        var (client, _) = GitHub.GitHubWebhookTests.Create(
+            factory.WithWebHostBuilder(b => b
+                .UseSetting("RateLimiting:Webhook:PermitLimit", "1")
+                .ConfigureServices(s => s.AddTransient<IStartupFilter, TestRemoteIpStartupFilter>())),
+            new GitHub.FakeGitHubGateway(), runWorker: false);
+
+        Task<HttpResponseMessage> BadPing(string ip)
+        {
+            var request = GitHub.WebhookTestData.Request("ping", "{}", signature: "sha256=00");
+            request.Headers.Add(TestRemoteIpHeader, ip);
+            return client.SendAsync(request);
+        }
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await BadPing("2001:db8:1:2::1")).StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await BadPing("2001:db8:1:2::2")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await BadPing("2001:db8:1:3::1")).StatusCode);
+    }
+
+    [Fact]
     public async Task UrlLint_SharesTheBucket()
     {
         var client = CreateClient(permitLimit: 2);
