@@ -5,7 +5,8 @@ namespace Aibysitter.Web.GitHub;
 public static class GitHubWebhookEndpoint
 {
     public const string Path = "/github/webhook";
-    public const int MaxBodyBytes = 25 * 1024 * 1024;
+    /// <summary>Pull request payloads are far smaller; GitHub's own cap is 25 MB.</summary>
+    public const int MaxBodyBytes = 1024 * 1024;
 
     public static IEndpointRouteBuilder MapGitHubWebhook(this IEndpointRouteBuilder endpoints)
     {
@@ -19,6 +20,7 @@ public static class GitHubWebhookEndpoint
         IGitHubGateway gateway,
         ReviewQueue queue,
         IReviewJobStore store,
+        WebhookSignatureLimiter limiter,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
@@ -30,17 +32,25 @@ public static class GitHubWebhookEndpoint
             return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
         }
 
-        if (request.ContentLength > MaxBodyBytes)
+        var client = request.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        if (limiter.IsExhausted(client))
+        {
+            return Results.StatusCode(StatusCodes.Status429TooManyRequests);
+        }
+
+        var body = await Infrastructure.RequestBody.ReadCappedAsync(request, MaxBodyBytes, cancellationToken);
+        if (body is null)
         {
             return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
         }
 
-        using var buffer = new MemoryStream();
-        await request.Body.CopyToAsync(buffer, cancellationToken);
-        var body = buffer.ToArray();
-
         if (!WebhookSignature.IsValid(settings.WebhookSecret!, body, request.Headers[WebhookSignature.HeaderName]))
         {
+            if (!limiter.TryCount(client))
+            {
+                return Results.StatusCode(StatusCodes.Status429TooManyRequests);
+            }
+
             logger.LogWarning("GitHub webhook rejected: invalid signature");
             return Results.Unauthorized();
         }

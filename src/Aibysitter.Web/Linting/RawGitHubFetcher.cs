@@ -36,7 +36,16 @@ public sealed class RawGitHubFetcher(HttpClient http)
 {
     public const string Host = "raw.githubusercontent.com";
     public const int MaxBytes = 100 * 1024;
+    /// <summary>Redirects followed per <see cref="FetchAsync"/>, shared by every probe and the link follow.</summary>
     public const int MaxRedirects = 3;
+
+    /// <summary>Redirect hops left in one fetch.</summary>
+    private sealed class RedirectBudget
+    {
+        private int remaining = MaxRedirects;
+
+        public bool TryTake() => Interlocked.Decrement(ref remaining) >= 0;
+    }
 
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
@@ -64,18 +73,19 @@ public sealed class RawGitHubFetcher(HttpClient http)
     {
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         budget.CancelAfter(Timeout);
-        var probes = await Task.WhenAll(FileNames.Select(name => ProbeAsync(RawUrl(repo, name), name, budget.Token)));
+        var redirects = new RedirectBudget();
+        var probes = await Task.WhenAll(FileNames.Select(name => ProbeAsync(RawUrl(repo, name), name, redirects, budget.Token)));
         cancellationToken.ThrowIfCancellationRequested();
         var chosen = Choose(probes, preferred);
         return chosen.Status == FetchStatus.Found && LinkPath.TryResolve(chosen.FileName!, chosen.Content!, out var target)
-            ? await FollowAsync(repo, chosen, target, budget.Token)
+            ? await FollowAsync(repo, chosen, target, redirects, budget.Token)
             : chosen;
     }
 
     /// <summary>Fetches a symlink's target once, inside the same time budget. A target that is itself a link is not followed.</summary>
-    private async Task<FetchResult> FollowAsync(RepoRef repo, FetchResult link, string target, CancellationToken cancellationToken)
+    private async Task<FetchResult> FollowAsync(RepoRef repo, FetchResult link, string target, RedirectBudget redirects, CancellationToken cancellationToken)
     {
-        var probe = await ProbeAsync(RawUrl(repo, target), target, cancellationToken);
+        var probe = await ProbeAsync(RawUrl(repo, target), target, redirects, cancellationToken);
         var result = link with { Content = null, LinkTarget = target };
         return probe.State switch
         {
@@ -112,28 +122,25 @@ public sealed class RawGitHubFetcher(HttpClient http)
         : probes.Any(p => p.State == ProbeState.Failed) ? FetchStatus.Unreachable
         : FetchStatus.NotFound;
 
-    private async Task<Probe> ProbeAsync(Uri url, string fileName, CancellationToken cancellationToken)
+    private async Task<Probe> ProbeAsync(Uri url, string fileName, RedirectBudget redirects, CancellationToken cancellationToken)
     {
         try
         {
-            for (var hop = 0; hop <= MaxRedirects; hop++)
+            while (true)
             {
                 using var response = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-                if (IsRedirect(response.StatusCode))
+                if (!IsRedirect(response.StatusCode))
                 {
-                    if (NextHop(url, response.Headers.Location) is not { } next)
-                    {
-                        return new Probe(fileName, ProbeState.Missing, null);
-                    }
-
-                    url = next;
-                    continue;
+                    return await ReadAsync(response, fileName, cancellationToken);
                 }
 
-                return await ReadAsync(response, fileName, cancellationToken);
-            }
+                if (NextHop(url, response.Headers.Location) is not { } next || !redirects.TryTake())
+                {
+                    return new Probe(fileName, ProbeState.Missing, null);
+                }
 
-            return new Probe(fileName, ProbeState.Missing, null);
+                url = next;
+            }
         }
         catch (OperationCanceledException)
         {

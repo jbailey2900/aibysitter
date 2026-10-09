@@ -59,11 +59,13 @@ public static class Hardening
         return services;
     }
 
-    /// <summary>Form posts and API calls share one bucket per client IP.</summary>
+    /// <summary>Form posts and API calls share one bucket per client IP. Segment match, so /Lint/ and /api/lint/ count too.</summary>
     private static bool IsLintRequest(HttpRequest request) =>
-        HttpMethods.IsPost(request.Method)
-        && (request.Path.Equals("/Lint", StringComparison.OrdinalIgnoreCase)
-            || request.Path.Equals(LintApi.Path, StringComparison.OrdinalIgnoreCase));
+        HttpMethods.IsPost(request.Method) && (IsFormPath(request) || IsApiPath(request));
+
+    private static bool IsFormPath(HttpRequest request) => request.Path.StartsWithSegments("/Lint", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsApiPath(HttpRequest request) => request.Path.StartsWithSegments(LintApi.Path, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Badges: one bucket per client IP, separate from linting.</summary>
     private static bool IsBadgeRequest(HttpRequest request) =>
@@ -77,8 +79,8 @@ public static class Hardening
     {
         var request = context.HttpContext.Request;
         var response = context.HttpContext.Response;
-        var isForm = HttpMethods.IsPost(request.Method) && request.Path.Equals("/Lint", StringComparison.OrdinalIgnoreCase);
-        var isApi = request.Path.Equals(LintApi.Path, StringComparison.OrdinalIgnoreCase);
+        var isForm = HttpMethods.IsPost(request.Method) && IsFormPath(request);
+        var isApi = IsApiPath(request);
         if (!isForm && !isApi)
         {
             return ValueTask.CompletedTask;
