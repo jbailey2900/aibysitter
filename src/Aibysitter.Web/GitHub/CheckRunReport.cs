@@ -14,6 +14,17 @@ public sealed record CheckRunReport(ReviewConclusion Conclusion, string Title, s
     public const string ConfigErrorTitle = "Config error";
     public const string ConfigErrorDetails = "The default is used for this entry. Generator and key reference: https://aibysitting.net/GitHub/Config";
 
+    /// <summary>GitHub rejects summaries over 65,535 characters.</summary>
+    public const int MaxSummaryLength = 60_000;
+
+    /// <summary>Entries listed per summary list (removed-file findings, notes, config errors).</summary>
+    public const int MaxListItems = 20;
+
+    /// <summary>Characters of author-derived text per summary line.</summary>
+    public const int MaxLineText = 300;
+
+    public const string TruncatedNote = "Summary truncated; see the annotations.";
+
     public IEnumerable<IReadOnlyList<CheckRunAnnotation>> AnnotationBatches() => Annotations.Chunk(AnnotationsPerRequest);
 
     public static CheckRunReport Build(
@@ -66,7 +77,7 @@ public sealed record CheckRunReport(ReviewConclusion Conclusion, string Title, s
             summary.AppendLine();
         }
 
-        summary.AppendLine($"Conclusion mode: `{RepoConfig.ConclusionName(config.Conclusion)}`. Scope: {(config.HasScope ? string.Join(", ", config.Scope.Select(g => $"`{g.Pattern}`")) : "not declared")}.");
+        summary.AppendLine($"Conclusion mode: `{RepoConfig.ConclusionName(config.Conclusion)}`. Scope: {(config.HasScope ? string.Join(", ", config.Scope.Select(g => GitHubMarkdown.Code(Clip(g.Pattern)))) : "not declared")}.");
         if (config.Ignore.Count > 0)
         {
             var ignored = files.Count(f => config.IsIgnoredByAny(f.Path));
@@ -93,19 +104,23 @@ public sealed record CheckRunReport(ReviewConclusion Conclusion, string Title, s
         {
             summary.AppendLine();
             summary.AppendLine("Findings on removed files:");
-            foreach (var f in onRemoved)
+            foreach (var f in onRemoved.Take(MaxListItems))
             {
-                summary.AppendLine($"- `{f.Path}`: {f.CheckId} {f.Message}");
+                summary.AppendLine($"- {GitHubMarkdown.Code(Clip(f.Path))}: {f.CheckId} {GitHubMarkdown.Text(Clip(f.Message))}");
             }
+
+            More(summary, onRemoved.Count);
         }
 
         if (notes is { Count: > 0 })
         {
             summary.AppendLine();
-            foreach (var note in notes)
+            foreach (var note in notes.Take(MaxListItems))
             {
-                summary.AppendLine($"- {note}");
+                summary.AppendLine($"- {GitHubMarkdown.Text(Clip(note))}");
             }
+
+            More(summary, notes.Count);
         }
 
         if (configErrors.Count > 0)
@@ -114,31 +129,58 @@ public sealed record CheckRunReport(ReviewConclusion Conclusion, string Title, s
             summary.AppendLine(config.FailsCheck
                 ? $"Config errors (defaults used for these; the check fails under {RepoConfig.ConclusionName(config.Conclusion)}):"
                 : "Config errors (defaults used for these):");
-            foreach (var error in configErrors)
+            foreach (var error in configErrors.Take(MaxListItems))
             {
-                summary.AppendLine($"- Line {error.Line}: {error.Message}");
+                summary.AppendLine($"- Line {error.Line}: {GitHubMarkdown.Text(Clip(error.Message))}");
             }
+
+            More(summary, configErrors.Count);
         }
 
-        return new CheckRunReport(conclusion, title, summary.ToString().TrimEnd(), annotations);
+        return new CheckRunReport(conclusion, title, CapSummary(summary.ToString().TrimEnd()), annotations);
+    }
+
+    private static string Clip(string text) => OctokitGitHubGateway.Clamp(text, MaxLineText);
+
+    private static void More(StringBuilder summary, int count)
+    {
+        if (count > MaxListItems)
+        {
+            summary.AppendLine($"- and {count - MaxListItems} more");
+        }
+    }
+
+    /// <summary>At most <see cref="MaxSummaryLength"/> characters, cut at a line end with <see cref="TruncatedNote"/>.</summary>
+    internal static string CapSummary(string summary)
+    {
+        if (summary.Length <= MaxSummaryLength)
+        {
+            return summary;
+        }
+
+        var limit = MaxSummaryLength - TruncatedNote.Length - 2;
+        var cut = summary.LastIndexOf('\n', limit);
+        return summary[..(cut > 0 ? cut : limit)].TrimEnd() + "\n\n" + TruncatedNote;
     }
 
     public const string TimeoutSummary = "Review stopped: a check exceeded the 1 second pattern limit on this pull request's content.";
 
-    /// <summary>A pattern hit the regex match timeout. Neutral, like other review failures.</summary>
-    public static CheckRunReport ForTimeout() => new(
-        ReviewConclusion.Neutral,
+    /// <summary>A pattern hit the regex match timeout.</summary>
+    /// <param name="conclusion">Failure under a failing conclusion mode; see <see cref="ReviewProcessor"/>.</param>
+    public static CheckRunReport ForTimeout(ReviewConclusion conclusion = ReviewConclusion.Neutral) => new(
+        conclusion,
         "Review failed",
         TimeoutSummary,
         []);
 
-    public static CheckRunReport ForError(Exception ex) => new(
-        ReviewConclusion.Neutral,
+    /// <param name="conclusion">Failure under a failing conclusion mode; Neutral where no config is known (worker, webhook).</param>
+    public static CheckRunReport ForError(Exception ex, ReviewConclusion conclusion = ReviewConclusion.Neutral) => new(
+        conclusion,
         "Review failed",
         $"Aibysitter could not complete this review ({ex.GetType().Name}). Push a new commit or redeliver the webhook to retry.",
         []);
 
     private static string Describe(IgnoreEntry entry) =>
-        string.Join(", ", entry.Paths.Select(g => $"`{g.Pattern}`"))
+        string.Join(", ", entry.Paths.Select(g => GitHubMarkdown.Code(g.Pattern)))
         + (entry.Checks is null ? "" : $" for {string.Join(", ", entry.Checks.Order(StringComparer.Ordinal))}");
 }
