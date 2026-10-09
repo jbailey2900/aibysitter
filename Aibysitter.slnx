@@ -8,5 +8,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Aibysitter.Rules.Tests/Aibysitter.Rules.Tests.csproj" />
+    <Project Path="tests/Aibysitter.Web.Smoke/Aibysitter.Web.Smoke.csproj" />
   </Folder>
 </Solution>
