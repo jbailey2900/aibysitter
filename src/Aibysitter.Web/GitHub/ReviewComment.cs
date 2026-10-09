@@ -56,7 +56,7 @@ public static class ReviewComment
             text.Append("\nFindings:\n\n");
             foreach (var a in findings.Take(listed))
             {
-                text.Append($"- [`{a.Path}:{a.Line}`]({FileUrl(pr, a.Path, a.Line)}) {a.Title}: {OneLine(a.Message)}\n");
+                text.Append($"- [{GitHubMarkdown.Code($"{a.Path}:{a.Line}")}]({FileUrl(pr, a.Path, a.Line)}) {a.Title}: {GitHubMarkdown.Text(a.Message)}\n");
             }
 
             var more = findings.Count - listed;
@@ -69,8 +69,6 @@ public static class ReviewComment
         text.Append($"\n[View the check run]({CheckRunUrl(pr, checkRunId)})\n");
         return text.ToString();
     }
-
-    private static string OneLine(string text) => string.Join(' ', text.Split((char[])['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)).Trim();
 }
 
 /// <summary>Creates or updates the one review comment on a PR; removes duplicates left by overlapping processes.</summary>

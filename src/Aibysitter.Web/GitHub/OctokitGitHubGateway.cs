@@ -51,19 +51,25 @@ public sealed class OctokitGitHubGateway(IOptions<GitHubOptions> options, TimePr
         return files.Select(f => new ChangedFile(f.FileName, MapStatus(f.Status), f.Patch, f.PreviousFileName)).ToList();
     }
 
-    public Task<string?> GetFileContentAsync(PullRequestRef pr, string path, CancellationToken cancellationToken) =>
+    public Task<FileContent?> GetFileContentAsync(PullRequestRef pr, string path, CancellationToken cancellationToken) =>
         ContentAtAsync(pr, path, pr.HeadSha);
 
-    public Task<string?> GetBaseFileContentAsync(PullRequestRef pr, string path, CancellationToken cancellationToken) =>
+    public Task<FileContent?> GetBaseFileContentAsync(PullRequestRef pr, string path, CancellationToken cancellationToken) =>
         ContentAtAsync(pr, path, pr.BaseSha ?? throw new InvalidOperationException($"{pr} has no base commit."));
 
-    private async Task<string?> ContentAtAsync(PullRequestRef pr, string path, string sha)
+    /// <summary>
+    /// Contents API: the size comes with the content, so files over <see cref="FileContent.MaxFileBytes"/> are not decoded.
+    /// GitHub omits the content of files over 1 MB. Directories and submodules return null.
+    /// </summary>
+    private async Task<FileContent?> ContentAtAsync(PullRequestRef pr, string path, string sha)
     {
         var client = await ClientAsync(pr.InstallationId);
         try
         {
-            var bytes = await client.Repository.Content.GetRawContentByRef(pr.Owner, pr.Repo, path, sha);
-            return Encoding.UTF8.GetString(bytes);
+            var items = await client.Repository.Content.GetAllContentsByRef(pr.Owner, pr.Repo, path, sha);
+            return items is [{ Type.Value: ContentType.File } file]
+                ? FileContent.From(file.Size, () => Convert.FromBase64String(file.EncodedContent ?? ""))
+                : null;
         }
         catch (NotFoundException)
         {
@@ -194,12 +200,34 @@ public sealed class OctokitGitHubGateway(IOptions<GitHubOptions> options, TimePr
         return new GitHubClient(Product) { Credentials = new Credentials(token.Token) };
     }
 
-    private static NewCheckRunAnnotation ToOctokit(CheckRunAnnotation a) =>
-        new(a.Path, a.Line, a.Line, MapLevel(a.Severity), a.Message)
+    /// <summary>Annotation text limits; GitHub allows 64 KB for message and raw details and 255 characters for the title.</summary>
+    public const int MaxAnnotationMessage = 4_000;
+    public const int MaxAnnotationTitle = 255;
+    public const int MaxAnnotationDetails = 4_000;
+
+    internal static NewCheckRunAnnotation ToOctokit(CheckRunAnnotation a) =>
+        new(a.Path, a.Line, a.Line, MapLevel(a.Severity), Clamp(a.Message, MaxAnnotationMessage))
         {
-            Title = a.Title,
-            RawDetails = a.RawDetails,
+            Title = Clamp(a.Title, MaxAnnotationTitle),
+            RawDetails = Clamp(a.RawDetails, MaxAnnotationDetails),
         };
+
+    /// <summary>At most <paramref name="max"/> characters, ending in … when cut; never splits a surrogate pair.</summary>
+    internal static string Clamp(string text, int max)
+    {
+        if (text.Length <= max)
+        {
+            return text;
+        }
+
+        var cut = max - 1;
+        if (char.IsHighSurrogate(text[cut - 1]))
+        {
+            cut--;
+        }
+
+        return text[..cut] + "…";
+    }
 
     internal static CheckAnnotationLevel MapLevel(Severity severity) => severity switch
     {
