@@ -126,9 +126,9 @@ public class SeoEndpointsTests(WebApplicationFactory<Program> factory)
         var links = Regex.Matches((await Get("/llms.txt")).Body, @"\]\((https://[^)]+)\)").Select(m => m.Groups[1].Value).ToList();
 
         Assert.NotEmpty(links);
-        foreach (var link in links)
+        Assert.Equal(Web.Seo.LlmsTxt.ExternalLinks, links.Where(l => !l.StartsWith(Base + "/", StringComparison.Ordinal)));
+        foreach (var link in links.Except(Web.Seo.LlmsTxt.ExternalLinks))
         {
-            Assert.StartsWith(Base + "/", link);
             var response = await client.GetAsync(link[Base.Length..]);
             Assert.True(response.StatusCode == HttpStatusCode.OK, $"{link}: {(int)response.StatusCode}");
         }
@@ -142,5 +142,14 @@ public class SeoEndpointsTests(WebApplicationFactory<Program> factory)
         Assert.Contains("<loc>https://example.test/</loc>", await client.GetStringAsync("/sitemap.xml"));
         Assert.Contains("Sitemap: https://example.test/sitemap.xml", await client.GetStringAsync("/robots.txt"));
         Assert.Contains("(https://example.test/Lint)", await client.GetStringAsync("/llms.txt"));
+    }
+
+    [Fact]
+    public async Task LlmsTxt_ListsCliAndAction()
+    {
+        var body = (await Get("/llms.txt")).Body;
+
+        Assert.Contains("- [CLI](https://www.nuget.org/packages/Aibysitter.Cli): `dotnet tool install --global Aibysitter.Cli`", body);
+        Assert.Contains("- [GitHub Action](https://github.com/marketplace/actions/aibysitter-rules-lint): `jbailey2900/aibysitter@v1`", body);
     }
 }

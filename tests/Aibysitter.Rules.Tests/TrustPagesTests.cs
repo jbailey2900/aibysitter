@@ -8,7 +8,11 @@ public class TrustPagesTests(WebApplicationFactory<Program> factory)
 {
     [Theory]
     [InlineData("/Privacy", "The text is never stored or logged. Request logs record IP address, path and status for 14 days.")]
-    [InlineData("/Privacy", "Logs record repository, pull request number, commit, delivery ID and finding count for 14 days. No file contents are logged.")]
+    [InlineData("/Privacy", "Logs record repository, pull request number, short commit SHA, delivery and check run IDs, finding count and any error text for 14 days. No file contents are logged.")]
+    [InlineData("/Privacy", "Holds a queue file for the duration of a review: installation ID, repository, pull request number, head and base commits, check run ID and delivery ID.")]
+    [InlineData("/Privacy", "Reads, at the pull request's head commit: the changed files and their diff, and rules files; and <code>.github/aibysitter.json</code> from the base commit.")]
+    [InlineData("/Privacy", "and as one comment when the config sets <code>comment</code>.")]
+    [InlineData("/Privacy", "<td>Reading files at the head commit and the config at the base commit</td>")]
     [InlineData("/Privacy", "Holds a queue file for the duration of a review")]
     [InlineData("/Privacy", "<td>Checks</td>")]
     [InlineData("/Privacy", "Lint by URL and badges: the server fetches the file from raw.githubusercontent.com, so GitHub sees the request come from this site. For public files it finds, it stores the repository name, file name, score, grade, ruleset version and time, kept up to 400 days, and shows them as score history. Private repositories cannot be read, so nothing is stored for them. The repository name is not logged.")]

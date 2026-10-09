@@ -49,7 +49,8 @@ public class HomePageTests(WebApplicationFactory<Program> factory)
 
         Assert.Contains(@"<a href=""/Lint"">Browser linter</a> <span>Available now</span>", html);
         Assert.Contains(@"<a href=""/GitHub"">GitHub App</a> <span>Available now</span>", html);
-        Assert.Contains("CLI and Action <span>Planned</span>", html);
+        Assert.Contains(@"<a href=""/Hooks"">CLI and Action</a> <span>Available now</span>", html);
+        Assert.DoesNotContain("Planned", html);
     }
 
     [Fact]

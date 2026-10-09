@@ -36,13 +36,13 @@
 </section>
 
 <figure class="terminal" aria-label="Example check run">
-    <pre><code><span class="t-prompt">check</span> Aibysitter review  <span class="t-prompt">conclusion</span> neutral
+    <pre><code><span class="t-prompt">check</span> Aibysitter review  <span class="t-prompt">conclusion</span> failure
 <span class="t-sum">4 findings (2 errors, 1 warning, 1 notice)</span>
 <span class="t-loc">docs/notes.txt:1           </span> <span class="t-sev t-error">failure</span> <span class="t-rule">P004</span>  Outside declared scope (added): docs/notes.txt
 <span class="t-loc">src/OrderService.cs:5      </span> <span class="t-sev t-error">failure</span> <span class="t-rule">P001</span>  Placeholder left in change: "YOUR_API_KEY"
 <span class="t-loc">src/OrderService.cs:9      </span> <span class="t-sev t-warning">warning</span> <span class="t-rule">P002</span>  Stub left in change: "throw new NotImplementedException("
 <span class="t-loc">.github/workflows/ci.yml:1 </span> <span class="t-sev t-info">notice </span> <span class="t-rule">P011</span>  CI config modified: .github/workflows/ci.yml</code></pre>
-    <figcaption>Check run from a test pull request seeded with one example of each check, under the advisory setting.</figcaption>
+    <figcaption>Check run from a test pull request seeded with one example of each check, under <code>fail-on-warnings</code>.</figcaption>
 </figure>
 
 <section class="section">
@@ -100,7 +100,7 @@
             </tr>
         </tbody>
     </table>
-    <p>The config file is itself a changed file: a pull request that edits it outside the declared scope gets a P004 finding, and is reviewed with the base branch's version; the summary says so. Invalid entries fall back to their defaults, are listed in the check summary and are annotated on their line of the config file. Under <code>fail-on-errors</code>, any config error fails the check.</p>
+    <p>The config file is itself a changed file: a pull request that edits it outside the declared scope gets a P004 finding, and is reviewed with the base branch's version; the summary says so. Invalid entries fall back to their defaults, are listed in the check summary and are annotated on their line of the config file. Under <code>fail-on-warnings</code> or <code>fail-on-errors</code>, any config error fails the check.</p>
     <p><a asp-page="/GitHub/Config">Generate a config file</a></p>
 </section>
 
@@ -109,9 +109,9 @@
     <ul>
         <li>Every webhook is verified against its HMAC-SHA256 signature; unsigned or mis-signed deliveries are rejected.</li>
         <li>The App acts as each installation with short-lived installation tokens. The App's private key stays on the server.</li>
-        <li>Permissions: Checks (read and write), Pull requests (read and write, used only for the <code>comment</code> option), Contents (read). It cannot push, merge, or change settings.</li>
+        <li>Permissions: Checks (read and write), Pull requests (read and write; write is used only for the <code>comment</code> option), Contents (read). It cannot push, merge, or change settings.</li>
         <li>Checks are static text analysis. Code from the pull request is never run.</li>
-        <li>It reads at the pull request's head commit only, with fixed caps: file contents for at most @Aibysitter.Web.GitHub.ReviewProcessor.MaxContentFetches changed files, @Aibysitter.Web.GitHub.ReviewProcessor.MaxUnchangedRulesFiles unchanged rules files and @Aibysitter.Web.GitHub.ReviewProcessor.MaxManifestFetches manifests per review.</li>
+        <li>It reads the pull request's head commit, and the config file from the base commit, with fixed caps: file contents for at most @Aibysitter.Web.GitHub.ReviewProcessor.MaxContentFetches changed files, @Aibysitter.Web.GitHub.ReviewProcessor.MaxUnchangedRulesFiles unchanged rules files and @Aibysitter.Web.GitHub.ReviewProcessor.MaxManifestFetches manifests per review.</li>
     </ul>
     <p>What it reads, keeps and logs: <a asp-page="/Privacy">Privacy</a>.</p>
 </section>

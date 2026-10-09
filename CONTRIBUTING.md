@@ -8,7 +8,7 @@
 
 ## Pull requests
 - Every pull request gets CI and the Aibysitter GitHub App's check, `Aibysitter review`.
-- `.github/aibysitter.json` ignores the check docs, the changelog and the P018 source for content checks, and `tests/**` for P005: they quote the patterns the checks look for.
+- `.github/aibysitter.json` ignores the check docs, the changelog and the P018 source for content checks, `tests/**` for P005, and the P001 source for P001: they quote the patterns the checks look for.
 - New packages need agreement in an issue first.
 
 ## Rule changes

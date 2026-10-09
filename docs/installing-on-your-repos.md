@@ -27,7 +27,7 @@ Change the repository list later under **Configure** for Aibysitter: personal ac
 
 ## First pull request
 
-The default conclusion is `advisory`. Every review completes as `success` (no findings) or `neutral` (findings). Nothing blocks a merge.
+Under `advisory` (the default), every review completes as `success` (no findings) or `neutral` (findings). Under `fail-on-warnings` or `fail-on-errors`, a blocking finding completes it as `failure`.
 
 - The check is named **Aibysitter review**, in the pull request's **Checks** tab. GitHub lists it as **Aibysitter / Aibysitter review**.
 - The summary has one row per check with its finding count, then notes and config errors.
@@ -49,7 +49,7 @@ Optional. Path: `.github/aibysitter.json`. The App reads it from the base branch
 ```json
 {
   "scope": ["src/**", "tests/**"],
-  "conclusion": "advisory",
+  "conclusion": "fail-on-warnings",
   "disable": ["P011", "R013"]
 }
 ```
@@ -58,7 +58,7 @@ Optional. Path: `.github/aibysitter.json`. The App reads it from the base branch
 |---|---|---|
 | `scope` | Path globs from the repository root. `**` spans folders and must be a whole segment (`**/*.cs`, not `**.cs`); `*` and `?` stay within one. Case-sensitive. Not supported: `{a,b}`, `[...]`, `!`, `\`. Turns on P004. Read only by P004; other checks review every changed file. | Not set; P004 off |
 | `conclusion` | `advisory`: findings report as `neutral` (trial mode). `fail-on-warnings`: any Warning or Error finding fails the check; P014 fails only when a rule fires at Error. `fail-on-errors`: any Error finding fails the check. Info findings never fail the check. | `advisory` |
-| `disable` | Check IDs (`P001`–`P019`) skip that check. Rule IDs (`R001`–`R016`) skip that rule inside P014. | None |
+| `disable` | Check IDs (P001–P019 except the withdrawn P003, P012, P017) skip that check. Rule IDs (`R001`–`R016`) skip that rule inside P014. | None |
 | `ignore` | Entries are a path glob (skipped by every content check) or `{ "paths": [globs], "checks": [IDs] }` (skipped by those checks only). Globs as in `scope`. P004, P008, P011, P013 and P014 read paths or rules files and do not apply `ignore`. Up to 50 entries. The summary lists the entries and how many changed files they match. The only key that removes files from checks. | None |
 | `comment` | `true`: one comment on the pull request with the summary table and up to 25 findings linked to their lines, updated on each new commit. No comment is created while there are no findings; turning it off leaves an existing comment as it is. | `false` |
 
@@ -73,7 +73,7 @@ Starter config:
 
 ```json
 {
-  "conclusion": "advisory",
+  "conclusion": "fail-on-warnings",
   "disable": ["P011"]
 }
 ```

@@ -18,7 +18,7 @@ Lints `CLAUDE.md`, `AGENTS.md`, and `GEMINI.md` (any directory), Cursor rules (`
 | R004 | FileLength (over 200 lines) | Warning |
 | R005 | DuplicateLines | Warning |
 | R007 | HedgedInstructions | Warning |
-| R008 | EmphasisInflation (over 3 per 100 lines) | Warning |
+| R008 | EmphasisInflation (over 5 per 100 lines, at least 3 allowed) | Warning |
 | R009 | SecretsInRulesFile | Error |
 | R010 | PersonaPreamble | Info |
 | R011 | EmptySections | Warning |
@@ -190,8 +190,9 @@ Entries live in [`src/Aibysitter.Web/Gallery/Content/`](src/Aibysitter.Web/Galle
 | `src/Aibysitter.Rules.Browser` | Build-time exporter: rule patterns and constants for the browser lint engine |
 | `src/Aibysitter.Web` | ASP.NET Core Razor Pages site, GitHub App webhook, gallery, notes (`Notes/Content`); browser lint engine in `wwwroot/js` |
 | `tests/Aibysitter.Rules.Tests` | xUnit tests; fixtures in `tests/fixtures` |
+| `tests/Aibysitter.Web.Smoke` | Playwright smoke tests against a running site (CI job `smoke`) |
 
-Requires the .NET 10 SDK. Build and test: `dotnet test Aibysitter.slnx`. The browser parity tests need Node.js on PATH: without it they pass with a SKIPPED message locally and fail when `CI` is set.
+Requires the .NET 10 SDK. Build and test: `dotnet test Aibysitter.slnx`. The browser parity tests need Node.js on PATH: without it they pass with a SKIPPED message locally and fail when `CI` is set. Smoke tests are skipped unless `AIBYSITTER_SMOKE_URL` is set; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Privacy
 
