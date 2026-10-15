@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 namespace Aibysitter.Rules.PullRequests;
@@ -17,10 +18,16 @@ public sealed partial class PlaceholderIdentifiers : AddedLinePatternCheck
 
     /// <summary>
     /// Not findings: comment lines (including inside block comments and docstrings), test-data attributes
-    /// ([InlineData], [TestCase], [DataRow]), and placeholders that a comment line in the same file names (a documented template).
+    /// ([InlineData], [TestCase], [DataRow]), placeholders that a comment line in the same file names (a documented template),
+    /// and every placeholder in a file that refuses to run while one is left (<see cref="IsGuardedTemplate"/>).
     /// </summary>
     protected override IEnumerable<string> Keep(ChangedFile file, DiffLine line, IReadOnlyList<string> matches)
     {
+        if (guarded.GetValue(file, f => new StrongBox<bool>(IsGuardedTemplate(f))).Value)
+        {
+            return [];
+        }
+
         var (commentLines, documented) = Comments(file);
         return commentLines.Contains(line.NewLine!.Value) || TestDataRegex().IsMatch(line.Text)
             ? []
@@ -28,6 +35,42 @@ public sealed partial class PlaceholderIdentifiers : AddedLinePatternCheck
     }
 
     private readonly System.Runtime.CompilerServices.ConditionalWeakTable<ChangedFile, Tuple<IReadOnlySet<int>, HashSet<string>>> comments = new();
+
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<ChangedFile, StrongBox<bool>> guarded = new();
+
+    /// <summary>
+    /// A line tests a value against a quoted literal containing <c>::</c> (beyond any placeholder in it), and that line or the
+    /// next throws or exits: T-SQL <c>LIKE N'%::%'</c> + <c>THROW</c>, PowerShell <c>-like '*::*'</c> + <c>throw</c>,
+    /// shell <c>== *"::"*</c> or <c>grep -q '::'</c> + <c>exit</c>. Read from the head content when fetched, otherwise from the
+    /// diff's added and context lines.
+    /// </summary>
+    internal static bool IsGuardedTemplate(ChangedFile file)
+    {
+        var lines = file.HeadContent is { } head
+            ? head.Replace("\r\n", "\n").Split('\n')
+            : file.Lines.Where(l => l.Kind != DiffLineKind.Removed).Select(l => l.Text).ToArray();
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            if (GuardTestRegex().IsMatch(lines[i])
+                && LiteralRegex().Matches(lines[i]).Any(m => PlaceholderRegex().Replace(m.Value, "").Contains("::", StringComparison.Ordinal))
+                && (StopRegex().IsMatch(lines[i]) || (i + 1 < lines.Length && StopRegex().IsMatch(lines[i + 1]))))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    [GeneratedRegex(@"(?i)\blike\b|-match\b|\bcontains\b|\bgrep\b|\bincludes\b|\bindexof\b|==|=~")]
+    private static partial Regex GuardTestRegex();
+
+    [GeneratedRegex(@"'[^'\n]*'|""[^""\n]*""")]
+    private static partial Regex LiteralRegex();
+
+    [GeneratedRegex(@"(?i)\b(?:throw|raiserror|exit|die|abort)\b")]
+    private static partial Regex StopRegex();
 
     /// <summary>Comment line numbers, and the placeholders those lines name.</summary>
     private (IReadOnlySet<int> Lines, HashSet<string> Documented) Comments(ChangedFile file)

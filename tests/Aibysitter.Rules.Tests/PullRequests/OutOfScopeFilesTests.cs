@@ -26,7 +26,7 @@ public class OutOfScopeFilesTests
 
         Assert.Equal(new[] { ".github/workflows/ci.yml", "README.md" }, findings.Select(f => f.Path));
         Assert.All(findings, f => Assert.Equal(1, f.Line));
-        Assert.Contains("add its path to \"scope\" in .github/aibysitter.json", findings[0].FixHint);
+        Assert.Contains("Add the path to \"scope\" in .github/aibysitter.json", findings[0].FixHint);
     }
 
     [Fact]

@@ -29,8 +29,8 @@ public sealed class OutOfScopeFiles : IPullRequestCheck
                     Id,
                     file.Path,
                     1,
-                    $"Outside declared scope ({file.Status.ToString().ToLowerInvariant()}): {string.Join(", ", outside)}",
-                    $"Revert this file, or add its path to \"scope\" in {RepoConfig.FilePath}.");
+                    $"Outside declared scope ({file.Status.ToString().ToLowerInvariant()}): {string.Join(", ", outside)}. Widen scope or move the file to its own PR.",
+                    $"Add the path to \"scope\" in {RepoConfig.FilePath}, or move the change to a pull request of its own.");
             }
         }
     }
