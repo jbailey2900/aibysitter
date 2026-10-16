@@ -45,6 +45,7 @@ public static class RulesetChangelog
 
     public static IReadOnlyList<ChangelogEntry> AppChecks { get; } =
     [
+        new(null, new DateOnly(2026, 10, 15), "Dogfood 4 tuning", ["P016: an exemption that a removed line in the same hunk already carried is an edited line, not flagged.", "P001: placeholders in a file that tests for \"::\" and throws or exits are a guarded template, not flagged.", "P004: the finding says to widen scope or move the file to its own PR.", "P001 stays on watch: the two remaining false positives are placeholders in one repository's template config file; ignore is the intended handling."]),
         new(null, new DateOnly(2026, 10, 15), "Dependency pin", ["System.Security.Cryptography.Pkcs pinned to 10.0.13 (NuGet audit under SDK 10.0.402)."]),
         new(null, new DateOnly(2026, 10, 9), "Review time limit (security review)", ["A review stops after 90 seconds, GitHub calls included, and closes as Review failed: failure under fail-on-warnings or fail-on-errors, neutral under advisory.", "Each GitHub API request times out after 30 seconds."]),
         new(null, new DateOnly(2026, 10, 9), "Review errors and read limits (security review)", ["Under fail-on-warnings or fail-on-errors, a review that fails with an error closes the check as failure; advisory stays neutral.", "Files over 100 KB or not UTF-8 are not read, and a review reads at most 2 MB of file content; the summary names the files not read.", "Text from the pull request is escaped in the check summary and the PR comment."]),
