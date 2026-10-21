@@ -128,6 +128,44 @@ public class Dogfood4TuningTests
         Assert.Equal("scripts/install.sql", finding.Path);
     }
 
+    // P001 guard window: the stop may follow a multi-line condition, up to a blank line or GO, at most 10 lines.
+
+    private static string[] MultiLineGuard(int conditionLines, bool blankBeforeThrow = false) =>
+    [
+        ":setvar BackupDirectory \"::STAGING_BACKUP_DIR::\"",
+        ":setvar RunnerLogin \"::RUNNER_LOGIN::\"",
+        "",
+        "IF N'$(BackupDirectory)$(RunnerLogin)' LIKE N'%::%'",
+        .. Enumerable.Repeat("    OR N'$(BackupDirectory)' = N''", conditionLines),
+        .. (blankBeforeThrow ? new[] { "" } : []),
+        "    THROW 50000, N'Fill in every :setvar value first.', 1;",
+        "GO",
+    ];
+
+    [Fact]
+    public void P001_MultiLineGuard_NotFlagged() =>
+        Assert.Empty(Run(new PlaceholderIdentifiers(), Added("scripts/sql/staging-restore-proc.sql", MultiLineGuard(3))));
+
+    [Fact]
+    public void P001_GuardThenBlankLineThenThrow_Flagged() =>
+        Assert.Equal(2, Run(new PlaceholderIdentifiers(), Added("scripts/sql/staging-restore-proc.sql", MultiLineGuard(3, blankBeforeThrow: true))).Count);
+
+    [Fact]
+    public void P001_ThrowPastTheWindow_Flagged()
+    {
+        Assert.Empty(Run(new PlaceholderIdentifiers(), Added("scripts/sql/a.sql", MultiLineGuard(PlaceholderIdentifiers.GuardWindow - 1))));
+        Assert.Equal(2, Run(new PlaceholderIdentifiers(), Added("scripts/sql/a.sql", MultiLineGuard(PlaceholderIdentifiers.GuardWindow))).Count);
+    }
+
+    [Fact]
+    public void P001_GuardThenGoThenThrow_Flagged()
+    {
+        var lines = MultiLineGuard(1).ToList();
+        lines.Insert(lines.FindIndex(l => l.Contains("THROW", StringComparison.Ordinal)), "GO");
+
+        Assert.Equal(2, Run(new PlaceholderIdentifiers(), Added("scripts/sql/a.sql", [.. lines])).Count);
+    }
+
     [Fact]
     public void P001_ThrowMessageNamingAPlaceholder_IsNotAGuard()
     {

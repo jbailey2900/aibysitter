@@ -38,9 +38,13 @@ public sealed partial class PlaceholderIdentifiers : AddedLinePatternCheck
 
     private readonly System.Runtime.CompilerServices.ConditionalWeakTable<ChangedFile, StrongBox<bool>> guarded = new();
 
+    /// <summary>Lines after a guard line searched for its throw or exit.</summary>
+    public const int GuardWindow = 10;
+
     /// <summary>
-    /// A line tests a value against a quoted literal containing <c>::</c> (beyond any placeholder in it), and that line or the
-    /// next throws or exits: T-SQL <c>LIKE N'%::%'</c> + <c>THROW</c>, PowerShell <c>-like '*::*'</c> + <c>throw</c>,
+    /// A line tests a value against a quoted literal containing <c>::</c> (beyond any placeholder in it), and that line or one of
+    /// the next <see cref="GuardWindow"/> lines throws or exits, with no blank line or <c>GO</c> between: T-SQL
+    /// <c>LIKE N'%::%'</c> + <c>THROW</c> (also after a multi-line condition), PowerShell <c>-like '*::*'</c> + <c>throw</c>,
     /// shell <c>== *"::"*</c> or <c>grep -q '::'</c> + <c>exit</c>. Read from the head content when fetched, otherwise from the
     /// diff's added and context lines.
     /// </summary>
@@ -54,7 +58,25 @@ public sealed partial class PlaceholderIdentifiers : AddedLinePatternCheck
         {
             if (GuardTestRegex().IsMatch(lines[i])
                 && LiteralRegex().Matches(lines[i]).Any(m => PlaceholderRegex().Replace(m.Value, "").Contains("::", StringComparison.Ordinal))
-                && (StopRegex().IsMatch(lines[i]) || (i + 1 < lines.Length && StopRegex().IsMatch(lines[i + 1]))))
+                && StopsWithin(lines, i))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool StopsWithin(string[] lines, int guard)
+    {
+        for (var j = guard; j < lines.Length && j <= guard + GuardWindow; j++)
+        {
+            if (j > guard && (lines[j].Trim().Length == 0 || lines[j].Trim().Equals("GO", StringComparison.OrdinalIgnoreCase)))
+            {
+                return false;
+            }
+
+            if (StopRegex().IsMatch(lines[j]))
             {
                 return true;
             }
