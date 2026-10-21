@@ -38,7 +38,7 @@
 <figure class="terminal" aria-label="Example check run">
     <pre><code><span class="t-prompt">check</span> Aibysitter review  <span class="t-prompt">conclusion</span> failure
 <span class="t-sum">4 findings (2 errors, 1 warning, 1 notice)</span>
-<span class="t-loc">docs/notes.txt:1           </span> <span class="t-sev t-error">failure</span> <span class="t-rule">P004</span>  Outside declared scope (added): docs/notes.txt
+<span class="t-loc">docs/notes.txt:1           </span> <span class="t-sev t-error">failure</span> <span class="t-rule">P004</span>  Outside declared scope (added): docs/notes.txt. Widen scope or move the file to its own PR.
 <span class="t-loc">src/OrderService.cs:5      </span> <span class="t-sev t-error">failure</span> <span class="t-rule">P001</span>  Placeholder left in change: "YOUR_API_KEY"
 <span class="t-loc">src/OrderService.cs:9      </span> <span class="t-sev t-warning">warning</span> <span class="t-rule">P002</span>  Stub left in change: "throw new NotImplementedException("
 <span class="t-loc">.github/workflows/ci.yml:1 </span> <span class="t-sev t-info">notice </span> <span class="t-rule">P011</span>  CI config modified: .github/workflows/ci.yml</code></pre>
@@ -50,7 +50,7 @@
     <ul>
         <li>Code is fetched from GitHub for the duration of one review and discarded. Diffs, file contents and finding text are never written to disk, database or logs.</li>
         <li>Results go back to GitHub only: the check run, its annotations and summary, and the PR comment when <code>comment</code> is on.</li>
-        <li>Stored per review: a daily count by conclusion. A queue file holding the repo, PR number and commit SHAs exists only while the review runs and is deleted when it finishes.</li>
+        <li>Stored per review: a daily count by conclusion. A queue file holding the repo, PR number and commit SHAs exists only while the review runs and is deleted when it finishes. An unreadable queue file is moved aside and deleted after 14 days.</li>
         <li>Logs keep the repo owner and name, PR number, short SHA, delivery and check-run IDs, finding count and any error text for 14 days.</li>
     </ul>
 </section>

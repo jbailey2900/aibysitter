@@ -139,6 +139,25 @@ public sealed class FileReviewJobStoreTests : IDisposable
     }
 
     [Fact]
+    public void LoadPending_DeletesFailedJobFilesOlderThan14Days()
+    {
+        var store = Store();
+        var failed = Path.Combine(root, FileReviewJobStore.FailedFolder);
+        var old = Path.Combine(failed, Guid.NewGuid().ToString("D") + ".json");
+        var recent = Path.Combine(failed, Guid.NewGuid().ToString("D") + ".json");
+        File.WriteAllText(old, "x");
+        File.WriteAllText(recent, "x");
+        File.SetLastWriteTimeUtc(old, time.GetUtcNow().UtcDateTime.AddDays(-15));
+        File.SetLastWriteTimeUtc(recent, time.GetUtcNow().UtcDateTime.AddDays(-13));
+
+        store.LoadPending();
+
+        Assert.False(File.Exists(old));
+        Assert.True(File.Exists(recent));
+        Assert.Equal(TimeSpan.FromDays(14), FileReviewJobStore.FailedRetention);
+    }
+
+    [Fact]
     public void SecondStoreInstance_SeesSavedJobs()
     {
         var job = Job();

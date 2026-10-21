@@ -45,6 +45,7 @@ public static class RulesetChangelog
 
     public static IReadOnlyList<ChangelogEntry> AppChecks { get; } =
     [
+        new(null, new DateOnly(2026, 10, 20), "P001 guard window", ["P001: a guard's throw or exit may follow a multi-line condition, up to 10 lines on, with no blank line or GO between."]),
         new(null, new DateOnly(2026, 10, 15), "Dogfood 4 tuning", ["P016: an exemption that a removed line in the same hunk already carried is an edited line, not flagged.", "P001: placeholders in a file that tests for \"::\" and throws or exits are a guarded template, not flagged.", "P004: the finding says to widen scope or move the file to its own PR.", "P001 stays on watch: the two remaining false positives are placeholders in one repository's template config file; ignore is the intended handling."]),
         new(null, new DateOnly(2026, 10, 15), "Dependency pin", ["System.Security.Cryptography.Pkcs pinned to 10.0.13 (NuGet audit under SDK 10.0.402)."]),
         new(null, new DateOnly(2026, 10, 9), "Review time limit (security review)", ["A review stops after 90 seconds, GitHub calls included, and closes as Review failed: failure under fail-on-warnings or fail-on-errors, neutral under advisory.", "Each GitHub API request times out after 30 seconds."]),

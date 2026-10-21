@@ -35,6 +35,16 @@ public class GitHubPageTests(WebApplicationFactory<Program> factory)
     private const string GateSentence = "A pull request that adds an unpinned action, a new dependency, a leaked key or a security exemption then cannot merge until a human looks.";
 
     [Fact]
+    public async Task ExampleCheckRun_P004Message_MatchesTheCheck()
+    {
+        var config = RepoConfig.Parse("{\"scope\": [\"src/**\"]}").Config;
+        var finding = Assert.Single(new OutOfScopeFiles().Evaluate(new PullRequestContext([new ChangedFile("docs/notes.txt", FileChangeStatus.Added, "@@ -0,0 +1 @@\n+x")], config)));
+        var html = await factory.CreateClient().GetStringAsync("/GitHub");
+
+        Assert.Contains($"<span class=\"t-rule\">P004</span>  {finding.Message}\n", html);
+    }
+
+    [Fact]
     public async Task GitHubPage_LeadsWithTheGate()
     {
         var html = await factory.CreateClient().GetStringAsync("/GitHub");
@@ -54,7 +64,7 @@ public class GitHubPageTests(WebApplicationFactory<Program> factory)
     [
         "Code is fetched from GitHub for the duration of one review and discarded. Diffs, file contents and finding text are never written to disk, database or logs.",
         "Results go back to GitHub only: the check run, its annotations and summary, and the PR comment when {0} is on.",
-        "Stored per review: a daily count by conclusion. A queue file holding the repo, PR number and commit SHAs exists only while the review runs and is deleted when it finishes.",
+        "Stored per review: a daily count by conclusion. A queue file holding the repo, PR number and commit SHAs exists only while the review runs and is deleted when it finishes. An unreadable queue file is moved aside and deleted after 14 days.",
         "Logs keep the repo owner and name, PR number, short SHA, delivery and check-run IDs, finding count and any error text for 14 days.",
     ];
 

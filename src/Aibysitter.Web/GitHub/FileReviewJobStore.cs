@@ -13,6 +13,9 @@ public sealed class FileReviewJobStore : IReviewJobStore
     private const string Extension = ".json";
     private static readonly TimeSpan StaleTempAge = TimeSpan.FromHours(1);
 
+    /// <summary>Unreadable job files in <see cref="FailedFolder"/> older than this are deleted at startup.</summary>
+    public static readonly TimeSpan FailedRetention = TimeSpan.FromDays(14);
+
     private readonly string root;
     private readonly TimeProvider time;
     private readonly ILogger<FileReviewJobStore> logger;
@@ -85,6 +88,7 @@ public sealed class FileReviewJobStore : IReviewJobStore
 
     public IReadOnlyList<ReviewJob> LoadPending()
     {
+        DeleteExpiredFailedFiles();
         DeleteStaleTempFiles();
         return Directory.EnumerateFiles(root, "*" + Extension)
             .Select(TryPeek)
@@ -139,6 +143,15 @@ public sealed class FileReviewJobStore : IReviewJobStore
         catch (IOException moveEx)
         {
             logger.LogError(moveEx, "Could not move {File} to {Folder}", Path.GetFileName(path), FailedFolder);
+        }
+    }
+
+    private void DeleteExpiredFailedFiles()
+    {
+        var cutoff = time.GetUtcNow() - FailedRetention;
+        foreach (var file in Directory.EnumerateFiles(Path.Combine(root, FailedFolder)).Where(f => File.GetLastWriteTimeUtc(f) < cutoff.UtcDateTime))
+        {
+            TryDelete(file);
         }
     }
 
