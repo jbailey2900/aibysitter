@@ -33,6 +33,7 @@
             <li><a asp-page="/Rules/Rule" asp-route-id="@row.Doc.Id">@row.Doc.Id</a> @row.Doc.Summary <span class="note">@row.Severity</span></li>
         }
     </ul>
+    <p>A deleted test can be justified in the pull request description with <code>Aibysitter: P008 &lt;removed test path&gt; -&gt; &lt;replacement path&gt;</code>. The P008 finding drops to Info when the replacement is in the head commit and is a test file or is named in a workflow under <code>.github/workflows/</code>.</p>
 </section>
 
 <figure class="terminal" aria-label="Example check run">

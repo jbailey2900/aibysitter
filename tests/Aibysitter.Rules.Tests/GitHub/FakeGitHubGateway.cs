@@ -60,6 +60,14 @@ internal sealed class FakeGitHubGateway : IGitHubGateway
         return ThrowOnInProgress is null ? Task.CompletedTask : Task.FromException(ThrowOnInProgress);
     }
 
+    public string Description { get; set; } = string.Empty;
+
+    public Task<string> GetPullRequestDescriptionAsync(PullRequestRef pr, CancellationToken cancellationToken)
+    {
+        Calls.Enqueue("description");
+        return Task.FromResult(Description);
+    }
+
     public Task<IReadOnlyList<ChangedFile>> GetChangedFilesAsync(PullRequestRef pr, CancellationToken cancellationToken)
     {
         Calls.Enqueue("files");
