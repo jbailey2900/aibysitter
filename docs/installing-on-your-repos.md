@@ -100,6 +100,19 @@ Suppress a rule inside a rules file with a comment on its own line:
 
 Precedence: comments in the file, then rule IDs in `disable`, then `"disable": ["P014"]`.
 
+## Justifying a deleted test
+
+A pull request that deletes a test file gets a P008 Error. When another file replaces it, add one line per deleted test to the pull request description:
+
+```
+Aibysitter: P008 tests/Orders/OrderServiceTests.cs -> tests/Orders/OrderTests.cs
+```
+
+- The finding drops to Info when the replacement is in the head commit and is a test file, or a workflow file under `.github/workflows/` names its path. The finding names the replacement and the workflow.
+- A line that fails a condition leaves the Error as it is; the summary says which condition failed.
+- Editing the description re-runs the review; no push is needed.
+- Paths are from the repository root, without spaces.
+
 ## Failing the build
 
 1. Set `"conclusion": "fail-on-warnings"` (or `"fail-on-errors"` to fail on Error findings only).
@@ -115,6 +128,9 @@ Precedence: comments in the file, then rule IDs in `disable`, then `"disable": [
 | Summary says "Not read (over 100 KB)" or "Not read (not UTF-8)" | The App reads files up to 100 KB of UTF-8 text | None; checks that read file contents skip those files, diff checks still run |
 | Summary says "Not read (2 MB review limit reached)" | The App reads at most 2 MB of file content per review | Split the pull request |
 | Check completes as **Review failed** | A GitHub API error, a check hit the 1-second pattern limit, or the review ran over 90 seconds | Push a new commit. App owner: redeliver the webhook |
+| Summary says "P008 justification for … not applied: … is not in the head commit" | The replacement path is wrong or the file is not in the pull request's head | Fix the path in the description |
+| Summary says "P008 justification for … not applied: … is not a test file and no workflow … references it" | The replacement is not a test file and no workflow file names it | Name a test file, or reference the replacement from a workflow |
+| Summary says "P008 justification for … not applied: no P008 finding for that path" | The removed path in the line does not match a deleted test file | Copy the path from the P008 finding |
 | Summary says "R006 skipped" | The repository file list is too large for one GitHub request | None; R006 does not run on that repository |
 | Unexpected P004 findings | `scope` does not cover the path | Add the glob to `scope`, or remove `scope` |
 | Summary says "PR comment not posted: the App needs Pull requests: Read and write" | The installation has not accepted the updated permissions | Accept the pending permission request under **Configure** for Aibysitter |

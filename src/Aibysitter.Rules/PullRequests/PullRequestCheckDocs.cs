@@ -50,11 +50,13 @@ public static class PullRequestCheckDocs
             "P008",
             "DeletedTests",
             "A change deletes a test file.",
-            "Removed code files under a test, tests, __tests__, spec, or specs folder, or named *Test(s).*, *.test.*, *.spec.*, test_*.py, *_test.py, *_test.go, *_spec.rb. Test methods removed from a kept file are not checked. Not flagged when the pull request also removes the non-test code file the test is named after (FooTests.cs with Foo.cs, foo.test.ts with foo.ts), or the whole package: the folder above the test folder, or the folder X a test project X.Tests is named after, holds no code files at the head.",
+            "Removed code files under a test, tests, __tests__, spec, or specs folder, or named *Test(s).*, *.test.*, *.spec.*, test_*.py, *_test.py, *_test.go, *_spec.rb. Test methods removed from a kept file are not checked. Not flagged when the pull request also removes the non-test code file the test is named after (FooTests.cs with Foo.cs, foo.test.ts with foo.ts), or the whole package: the folder above the test folder, or the folder X a test project X.Tests is named after, holds no code files at the head. Downgraded to Info by a line in the PR description, \"Aibysitter: P008 <removed test path> -> <replacement path>\", when the replacement exists at the head and is a test file or is named in a workflow file under .github/workflows/; the finding names the replacement and the workflow. A line that fails a condition leaves the finding as it is and the summary says which condition failed. Editing the description re-runs the review.",
             "removed: tests/Orders/OrderServiceTests.cs",
             "modified: tests/Orders/OrderServiceTests.cs",
             KnownLimits:
             [
+                "A justification is checked mechanically: the replacement exists and is a test file or is named in a workflow, at the head. It does not show that the replacement covers what the deleted test did, and the same pull request can add the workflow reference.",
+                "Paths in a justification line cannot contain spaces.",
                 "A non-test file whose name ends in Test or Tests (src/Checks/AssertNothingTests.cs) is read as a test file: removing it is flagged, and its own test file is not matched to it by name.",
             ]),
         new(

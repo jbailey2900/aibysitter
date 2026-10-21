@@ -10,6 +10,9 @@ public interface IGitHubGateway
 
     Task<IReadOnlyList<ChangedFile>> GetChangedFilesAsync(PullRequestRef pr, CancellationToken cancellationToken);
 
+    /// <summary>The pull request description; empty when it has none.</summary>
+    Task<string> GetPullRequestDescriptionAsync(PullRequestRef pr, CancellationToken cancellationToken);
+
     /// <summary>File text at the PR head commit, or null when the file does not exist.</summary>
     Task<FileContent?> GetFileContentAsync(PullRequestRef pr, string path, CancellationToken cancellationToken);
 

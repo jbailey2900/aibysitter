@@ -18,6 +18,9 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
     /// <summary>package.json, Makefile, .gitignore, and MSBuild files read for R006.</summary>
     public const int MaxManifestFetches = 20;
 
+    /// <summary>Workflow files read for P008 justifications.</summary>
+    public const int MaxWorkflowFetches = 20;
+
     /// <returns>True when the check run was completed (with findings or as "Review failed"); false when it could not be closed.</returns>
     public async Task<bool> ProcessAsync(ReviewJob job, CancellationToken cancellationToken)
     {
@@ -37,9 +40,11 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
 
             var notes = new List<string>();
             var tree = await TreeForRulesFilesAsync(pr, files, config, reviewToken);
+            string? description = null;
             if (NeedsTreeForDeletedTests(files, config))
             {
                 tree ??= await gateway.GetTreeAsync(pr, reviewToken);
+                description = await gateway.GetPullRequestDescriptionAsync(pr, reviewToken);
             }
 
             var symlinks = files.Where(f => RulesFileLint.IsRulesFile(f) && tree?.Symlinks.Contains(f.Path) == true).ToList();
@@ -63,9 +68,11 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
             }
 
             var (repo, unchanged) = await BuildRepoViewAsync(pr, files, enriched, config, tree, notes, budget, reviewToken);
+            var workflows = await WorkflowFilesAsync(pr, tree, description, budget, reviewToken);
             notes.AddRange(budget.Notes());
 
-            var review = reviewer.Review(new PullRequestContext(enriched, config, repo, unchanged, tree?.Paths));
+            var review = reviewer.Review(new PullRequestContext(enriched, config, repo, unchanged, tree?.Paths, description, workflows));
+            notes.AddRange(review.Notes ?? []);
             var report = CheckRunReport.Build(review, reviewer.Checks, enriched, config, configErrors, notes, configNote);
             if (config.Comment)
             {
@@ -192,7 +199,28 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
             ? await gateway.GetTreeAsync(pr, cancellationToken)
             : null;
 
-    /// <summary>P008 reads the head file list when the pull request removes a test file.</summary>
+    /// <summary>Workflow files at the head, read only when a P008 justification can be accepted only through a workflow reference.</summary>
+    private async Task<IReadOnlyDictionary<string, string>?> WorkflowFilesAsync(
+        PullRequestRef pr, RepoTree? tree, string? description, ContentBudget budget, CancellationToken cancellationToken)
+    {
+        if (tree is null || !DeletedTestJustifications.NeedsWorkflows(description))
+        {
+            return null;
+        }
+
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var path in tree.Paths.Where(DeletedTestJustifications.IsWorkflowFile).Order(StringComparer.Ordinal).Take(MaxWorkflowFetches))
+        {
+            if (await budget.ReadAsync(path, () => gateway.GetFileContentAsync(pr, path, cancellationToken)) is { } text)
+            {
+                result[path] = text;
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>P008 reads the head file list and the PR description when the pull request removes a test file.</summary>
     internal static bool NeedsTreeForDeletedTests(IReadOnlyList<ChangedFile> files, RepoConfig config) =>
         config.IsEnabled("P008") && files.Any(f => f.Status == FileChangeStatus.Removed && FileKinds.IsTestFile(f.Path));
 

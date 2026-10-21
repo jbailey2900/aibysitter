@@ -9,7 +9,14 @@ public enum ReviewConclusion
     Failure,
 }
 
-public sealed record PullRequestReview(IReadOnlyList<PullRequestFinding> Findings, ReviewConclusion Conclusion);
+/// <param name="Notes">Summary notes from checks (<see cref="INotesSource"/>).</param>
+public sealed record PullRequestReview(IReadOnlyList<PullRequestFinding> Findings, ReviewConclusion Conclusion, IReadOnlyList<string>? Notes = null);
+
+/// <summary>A check that adds notes to the check run summary.</summary>
+public interface INotesSource
+{
+    IEnumerable<string> Notes(PullRequestContext context);
+}
 
 public sealed class PullRequestReviewer
 {
@@ -38,7 +45,13 @@ public sealed class PullRequestReviewer
             .ThenBy(f => f.CheckId, StringComparer.Ordinal)
             .ToList();
 
-        return new PullRequestReview(findings, Conclude(findings, context.Config));
+        var notes = Checks
+            .Where(c => context.Config.IsEnabled(c.Id))
+            .OfType<INotesSource>()
+            .SelectMany(c => c.Notes(context))
+            .ToList();
+
+        return new PullRequestReview(findings, Conclude(findings, context.Config), notes);
     }
 
     /// <summary>The context with files that <c>ignore</c> excludes from this check removed.</summary>

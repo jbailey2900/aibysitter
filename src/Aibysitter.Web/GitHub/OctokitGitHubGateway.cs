@@ -51,6 +51,13 @@ public sealed class OctokitGitHubGateway(IOptions<GitHubOptions> options, TimePr
         return files.Select(f => new ChangedFile(f.FileName, MapStatus(f.Status), f.Patch, f.PreviousFileName)).ToList();
     }
 
+    public async Task<string> GetPullRequestDescriptionAsync(PullRequestRef pr, CancellationToken cancellationToken)
+    {
+        var client = await ClientAsync(pr.InstallationId, cancellationToken);
+        var pull = await client.PullRequest.Get(pr.Owner, pr.Repo, pr.Number).WaitAsync(cancellationToken);
+        return pull.Body ?? string.Empty;
+    }
+
     public Task<FileContent?> GetFileContentAsync(PullRequestRef pr, string path, CancellationToken cancellationToken) =>
         ContentAtAsync(pr, path, pr.HeadSha, cancellationToken);
 
