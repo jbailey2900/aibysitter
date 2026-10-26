@@ -157,7 +157,7 @@ jobs:
           fail-on-error: "true"
 ```
 
-- Pin by commit SHA. Copy the commit SHA from the release notes. `@v1` is flagged by P015 (unpinned action).
+- Pin by commit SHA. Copy the commit SHA from the release notes: the full 40 characters; GitHub does not accept a short SHA in `uses:`. `@v1` is flagged by P015 (unpinned action).
 - The check run is named `Aibysitter rules`.
 - Run it on every pull request, docs-only ones included: rules files are top-level `*.md` files, so path filters that skip docs skip the lint.
 - `persist-credentials: false` is fine; the Action reads the checkout and does not push.
