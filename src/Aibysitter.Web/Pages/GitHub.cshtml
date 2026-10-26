@@ -39,7 +39,7 @@
 <figure class="terminal" aria-label="Example check run">
     <pre><code><span class="t-prompt">check</span> Aibysitter review  <span class="t-prompt">conclusion</span> failure
 <span class="t-sum">4 findings (2 errors, 1 warning, 1 notice)</span>
-<span class="t-loc">docs/notes.txt:1           </span> <span class="t-sev t-error">failure</span> <span class="t-rule">P004</span>  Outside declared scope (added): docs/notes.txt. Widen scope or move the file to its own PR.
+<span class="t-loc">docs/notes.txt:1           </span> <span class="t-sev t-error">failure</span> <span class="t-rule">P004</span>  Outside declared scope (added): docs/notes.txt. Widen `scope` in a separate PR merged first, or move the file to its own PR.
 <span class="t-loc">src/OrderService.cs:5      </span> <span class="t-sev t-error">failure</span> <span class="t-rule">P001</span>  Placeholder left in change: "YOUR_API_KEY"
 <span class="t-loc">src/OrderService.cs:9      </span> <span class="t-sev t-warning">warning</span> <span class="t-rule">P002</span>  Stub left in change: "throw new NotImplementedException("
 <span class="t-loc">.github/workflows/ci.yml:1 </span> <span class="t-sev t-info">notice </span> <span class="t-rule">P011</span>  CI config modified: .github/workflows/ci.yml</code></pre>

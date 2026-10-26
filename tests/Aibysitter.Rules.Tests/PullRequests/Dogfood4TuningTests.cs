@@ -185,7 +185,7 @@ public class Dogfood4TuningTests
         var config = RepoConfig.Parse("{\"scope\": [\"src/**\"]}").Config;
         var finding = Assert.Single(new OutOfScopeFiles().Evaluate(Context(config, Modified("README.md", "@@ -1 +1 @@\n-a\n+b"))));
 
-        Assert.Equal("Outside declared scope (modified): README.md. Widen scope or move the file to its own PR.", finding.Message);
+        Assert.Equal("Outside declared scope (modified): README.md. Widen `scope` in a separate PR merged first, or move the file to its own PR.", finding.Message);
         Assert.Equal($"Add the path to \"scope\" in {RepoConfig.FilePath}, or move the change to a pull request of its own.", finding.FixHint);
     }
 }

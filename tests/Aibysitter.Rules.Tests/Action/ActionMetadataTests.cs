@@ -50,6 +50,42 @@ public class ActionMetadataTests
     }
 
     [Fact]
+    public void DotnetVersion_ExactDefault_ReadBySetupStep()
+    {
+        Assert.Matches(@"\n  dotnet-version:\n    description: .+\n    required: false\n    default: ""\d+\.\d+\.\d{3}""\n", Text);
+        Assert.Contains("        dotnet-version: ${{ inputs.dotnet-version }}\n", Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("10.0.x", Text, StringComparison.Ordinal);
+    }
+
+    private static string ReadmeAction
+    {
+        get
+        {
+            var readme = File.ReadAllText(Path.Combine(NodeRunner.RepoRoot, "README.md")).ReplaceLineEndings("\n");
+            var start = readme.IndexOf("## GitHub Action\n", StringComparison.Ordinal);
+            return readme[start..readme.IndexOf("\n## ", start + 1, StringComparison.Ordinal)];
+        }
+    }
+
+    [Theory]
+    [InlineData("on: pull_request\n")]
+    [InlineData("      - uses: jbailey2900/aibysitter@<sha> # v1.1.3\n")]
+    [InlineData("persist-credentials: false")]
+    [InlineData("Copy the commit SHA from the release notes.")]
+    [InlineData("`@v1` is flagged by P015")]
+    [InlineData("The check run is named `Aibysitter rules`.")]
+    [InlineData("\"No rules files found\"")]
+    [InlineData("A `files` glob that matches nothing counts as no files")]
+    [InlineData("Without `checks: write`")]
+    [InlineData("the `cli-version` default in that commit's `action.yml`")]
+    [InlineData("docs-only")]
+    [InlineData("| `dotnet-version` |")]
+    public void Readme_ActionSection_Covers(string text) => Assert.Contains(text, ReadmeAction, StringComparison.Ordinal);
+
+    [Fact]
+    public void Readme_ActionSection_NoFloatingTag() => Assert.DoesNotContain("aibysitter@v1\n", ReadmeAction, StringComparison.Ordinal);
+
+    [Fact]
     public void Steps_InstallFromNuGet_OrBuildFromSource_ByCliVersion()
     {
         Assert.Contains("      if: ${{ inputs.cli-version != '' }}\n      shell: bash\n      working-directory: ${{ runner.temp }}\n", Text, StringComparison.Ordinal);

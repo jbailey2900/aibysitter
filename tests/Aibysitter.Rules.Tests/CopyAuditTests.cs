@@ -14,7 +14,7 @@ public class CopyAuditTests(WebApplicationFactory<Program> factory)
     [InlineData("/GitHub", "It reads the pull request's head commit, and the config file from the base commit, with fixed caps:")]
     [InlineData("/GitHub", "<span class=\"t-prompt\">conclusion</span> failure")]
     [InlineData("/GitHub", "seeded with one example of each check, under <code>fail-on-warnings</code>.</figcaption>")]
-    [InlineData("/GitHub/Config", "Commit it to the default branch. A pull request that adds or changes it takes effect after it merges.")]
+    [InlineData("/GitHub/Config", "Commit it to the default branch. The App reads this file from the base branch: a change takes effect on pull requests reviewed after it merges.")]
     public async Task Page_HasCorrectedCopy(string path, string expected) =>
         Assert.Contains(expected, await factory.CreateClient().GetStringAsync(path));
 

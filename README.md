@@ -138,18 +138,32 @@ Composition: `# title`, the intro when one pack is chosen, then sections in pack
 
 ## GitHub Action
 
-`action.yml` lints rules files with the CLI and posts a check run named `Aibysitter rules` with an annotation per finding. On the [GitHub Marketplace](https://github.com/marketplace/actions/aibysitter-rules-lint).
+`action.yml` lints rules files with the CLI and posts a check run with an annotation per finding. On the [GitHub Marketplace](https://github.com/marketplace/actions/aibysitter-rules-lint).
 
 ```yaml
+on: pull_request
 permissions:
   contents: read
   checks: write
-steps:
-  - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-  - uses: jbailey2900/aibysitter@v1
-    with:
-      fail-on-error: "true"
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jbailey2900/aibysitter@<sha> # v1.1.3
+        with:
+          fail-on-error: "true"
 ```
+
+- Pin by commit SHA. Copy the commit SHA from the release notes. `@v1` is flagged by P015 (unpinned action).
+- The check run is named `Aibysitter rules`.
+- Run it on every pull request, docs-only ones included: rules files are top-level `*.md` files, so path filters that skip docs skip the lint.
+- `persist-credentials: false` is fine; the Action reads the checkout and does not push.
+- No rules files: the check run title is "No rules files found", the summary "No rules files found.", the conclusion `success`. A `files` glob that matches nothing counts as no files; an explicit path without wildcards that does not exist fails the step.
+- Without `checks: write`: no check run is posted. Annotations are written to the log (GitHub shows 10 per type per step) and the job summary lists every finding. The step passes; only `fail-on-error` and `fail-below` fail the job.
+- Pinned by SHA, `cli-version` resolves to the `cli-version` default in that commit's `action.yml` (0.4.2 for v1.1.3). Empty builds the CLI from that commit's source.
 
 | Input | Default | |
 |---|---|---|
@@ -157,7 +171,8 @@ steps:
 | `fail-on-error` | `false` | Fail when any Error finding remains. |
 | `fail-below` | empty | Fail when a file's grade is below A, B, C or D. |
 | `cli-version` | the CLI version released with this tag | `Aibysitter.Cli` version installed from nuget.org. Empty: build the CLI from the action's source (about a minute). |
-| `token` | `github.token` | Needs `checks: write`. Without it, annotations are written to the log (GitHub shows 10 per type per step) and the job summary lists all findings. |
+| `dotnet-version` | an exact SDK version known to install (`10.0.402`) | SDK version for `actions/setup-dotnet`. |
+| `token` | `github.token` | Needs `checks: write`. Without it, see above. |
 
 Outputs: `grade` and `score` (lowest across files), `findings` (total), `report` (path to the merged JSON).
 

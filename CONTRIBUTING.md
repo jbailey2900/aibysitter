@@ -17,7 +17,7 @@
 
 ## Releases
 - CLI: bump `<Version>` in `src/Aibysitter.Cli/Aibysitter.Cli.csproj` and the `cli-version` default in `action.yml` in the same pull request. After merge, tag `cli-v<Version>` on `main`; `release-cli.yml` publishes to nuget.org.
-- Action: after the CLI version is on nuget.org, tag `v<major>.<minor>.<patch>` on `main`, move `v<major>`, and publish the release to the Marketplace.
+- Action: after the CLI version is on nuget.org, tag `v<major>.<minor>.<patch>` on `main`, move `v<major>`, and publish the release to the Marketplace. The release notes give the commit SHA to pin. Before tagging, check the `dotnet-version` default in `action.yml` is an SDK version published and installable on all three runner OSes.
 
 ## False positives
 Report with the False positive issue template: rule ID, the line, why it is wrong.
