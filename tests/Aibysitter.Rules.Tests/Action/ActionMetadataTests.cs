@@ -71,7 +71,7 @@ public class ActionMetadataTests
     [InlineData("on: pull_request\n")]
     [InlineData("      - uses: jbailey2900/aibysitter@<sha> # v1.1.3\n")]
     [InlineData("persist-credentials: false")]
-    [InlineData("Copy the commit SHA from the release notes.")]
+    [InlineData("Copy the commit SHA from the release notes: the full 40 characters")]
     [InlineData("`@v1` is flagged by P015")]
     [InlineData("The check run is named `Aibysitter rules`.")]
     [InlineData("\"No rules files found\"")]

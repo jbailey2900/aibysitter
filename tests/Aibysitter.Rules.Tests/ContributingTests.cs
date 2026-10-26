@@ -66,7 +66,7 @@ public class ContributingTests
     [InlineData("False positive issue template")]
     [InlineData("the `cli-version` default in `action.yml` in the same pull request")]
     [InlineData("after the CLI version is on nuget.org, tag `v<major>.<minor>.<patch>`")]
-    [InlineData("The release notes give the commit SHA to pin")]
+    [InlineData("The release notes give the full 40-character commit SHA to pin, as a `uses:` line")]
     [InlineData("`dotnet-version` default in `action.yml` is an SDK version published and installable")]
     public void Contributing_Covers(string text) =>
         Assert.Contains(text, File.ReadAllText(Path.Combine(NodeRunner.RepoRoot, "CONTRIBUTING.md")), StringComparison.Ordinal);
