@@ -57,6 +57,10 @@ public partial class ConfigPageTests(WebApplicationFactory<Program> factory)
     private static string Encoded(string json) => HtmlEncoder.Default.Encode(json);
 
     [Fact]
+    public async Task Get_SaysConfigIsReadFromTheBaseBranch() =>
+        Assert.Contains("The App reads this file from the base branch: a change takes effect on pull requests reviewed after it merges.", await factory.CreateClient().GetStringAsync("/GitHub/Config"));
+
+    [Fact]
     public async Task Get_ListsEveryCheckAndRule_AllChecked_NoOutput()
     {
         var html = await factory.CreateClient().GetStringAsync("/GitHub/Config");

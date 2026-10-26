@@ -16,6 +16,8 @@ Save it as `.github/aibysitter.json` on the default branch. Then require the **A
 
 Install: https://github.com/apps/aibysitter/installations/new
 
+Linting rules files in CI without the App: the GitHub Action, [README, GitHub Action](https://github.com/jbailey2900/aibysitter#github-action).
+
 ## Install
 
 1. Open https://github.com/apps/aibysitter/installations/new.

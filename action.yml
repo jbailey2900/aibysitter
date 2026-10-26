@@ -22,6 +22,10 @@ inputs:
     description: Aibysitter.Cli version to install from nuget.org. Empty builds the CLI from the action's source.
     required: false
     default: "0.4.2"
+  dotnet-version:
+    description: SDK version for actions/setup-dotnet. An exact version known to install; set another to override.
+    required: false
+    default: "10.0.402"
   token:
     description: Token for the check run. Needs checks write; without it, annotations go to the log.
     required: false
@@ -46,7 +50,7 @@ runs:
   steps:
     - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
       with:
-        dotnet-version: 10.0.x
+        dotnet-version: ${{ inputs.dotnet-version }}
 
     - name: Install aibysitter CLI
       if: ${{ inputs.cli-version != '' }}
