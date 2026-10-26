@@ -10,6 +10,25 @@ public class ReleaseWorkflowTests
     private static string ReleaseCli => File.ReadAllText(Path.Combine(WorkflowsDir, "release-cli.yml"));
 
     [Fact]
+    public void GlobalJson_PinsSdk_LatestPatch()
+    {
+        var sdk = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(NodeRunner.RepoRoot, "global.json"))).RootElement.GetProperty("sdk");
+
+        Assert.Equal(("10.0.402", "latestPatch"), (sdk.GetProperty("version").GetString(), sdk.GetProperty("rollForward").GetString()));
+    }
+
+    [Fact]
+    public void SetupDotnet_EveryWorkflowUsesGlobalJson()
+    {
+        var steps = Directory.GetFiles(WorkflowsDir, "*.yml")
+            .SelectMany(f => Regex.Matches(File.ReadAllText(f).ReplaceLineEndings("\n"), @"uses: actions/setup-dotnet@\S+.*\n\s+with:\n(?<with>(?:\s{10,}.*\n)+)").Select(m => (File: Path.GetFileName(f), With: m.Groups["with"].Value)))
+            .ToList();
+
+        Assert.Equal(4, steps.Count);
+        Assert.All(steps, s => Assert.Equal("          global-json-file: global.json\n", s.With));
+    }
+
+    [Fact]
     public void ServiceImages_PinnedByDigest()
     {
         var images = Directory.GetFiles(WorkflowsDir, "*.yml")
