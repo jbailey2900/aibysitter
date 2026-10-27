@@ -68,13 +68,13 @@ public static class GitHubWebhookEndpoint
             return Results.NoContent();
         }
 
-        if (!WebhookPayload.TryParsePullRequest(body, out var action, out var pr, out var descriptionChanged))
+        if (!WebhookPayload.TryParsePullRequest(body, out var action, out var pr, out var justificationsChanged))
         {
             logger.LogWarning("GitHub delivery {DeliveryId}: pull_request payload missing required fields", deliveryId);
             return Results.BadRequest();
         }
 
-        if (!WebhookPayload.IsReviewed(action, descriptionChanged))
+        if (!WebhookPayload.IsReviewed(action, justificationsChanged))
         {
             return Results.NoContent();
         }
