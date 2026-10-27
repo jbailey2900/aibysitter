@@ -14,11 +14,17 @@ public static partial class DeletedTestJustifications
 {
     public const string Workflows = ".github/workflows/";
 
-    /// <summary>Removed path and replacement, in description order.</summary>
+    /// <summary>Removed path and replacement, in description order, with <c>\</c> as <c>/</c> and no leading <c>./</c>.</summary>
     public static IReadOnlyList<(string Removed, string Replacement)> Parse(string? description) =>
         description is null
             ? []
-            : LineRegex().Matches(description.Replace("\r\n", "\n")).Select(m => (m.Groups["removed"].Value, m.Groups["replacement"].Value)).ToList();
+            : LineRegex().Matches(description.Replace("\r\n", "\n")).Select(m => (NormalizePath(m.Groups["removed"].Value), NormalizePath(m.Groups["replacement"].Value))).ToList();
+
+    private static string NormalizePath(string path)
+    {
+        path = path.Replace('\\', '/');
+        return path.StartsWith("./", StringComparison.Ordinal) ? path[2..] : path;
+    }
 
     /// <summary>True when some justification can only be accepted through a workflow reference.</summary>
     public static bool NeedsWorkflows(string? description) => Parse(description).Any(j => !FileKinds.IsTestFile(j.Replacement));
@@ -50,7 +56,7 @@ public static partial class DeletedTestJustifications
             {
                 var workflow = FileKinds.IsTestFile(replacement)
                     ? null
-                    : context.WorkflowFiles?.Where(w => w.Value.Contains(replacement, StringComparison.Ordinal)).Select(w => w.Key).Order(StringComparer.Ordinal).FirstOrDefault();
+                    : context.WorkflowFiles?.Where(w => w.Value.Replace('\\', '/').Contains(replacement, StringComparison.Ordinal)).Select(w => w.Key).Order(StringComparer.Ordinal).FirstOrDefault();
                 if (!FileKinds.IsTestFile(replacement) && workflow is null)
                 {
                     reason = $"{replacement} is not a test file and no workflow under {Workflows} references it";
