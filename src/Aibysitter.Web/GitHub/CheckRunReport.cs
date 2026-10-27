@@ -89,7 +89,10 @@ public sealed record CheckRunReport(ReviewConclusion Conclusion, string Title, s
         summary.AppendLine("|---|---|---|");
         foreach (var check in checks)
         {
-            summary.AppendLine($"| {check.Id} {check.Title} | {(check is RulesFileLint ? "Per rule" : check.Severity.ToString())} | {(config.IsEnabled(check.Id) ? review.Findings.Count(f => f.CheckId == check.Id).ToString(CultureInfo.InvariantCulture) : "disabled")} |");
+            foreach (var (severity, count) in SummaryRows(check, review.Findings, config))
+            {
+                summary.AppendLine($"| {check.Id} {check.Title} | {severity} | {count} |");
+            }
         }
 
         var disabledRules = config.Disabled.Where(id => id.StartsWith('R')).Order(StringComparer.Ordinal).ToList();
@@ -189,4 +192,26 @@ public sealed record CheckRunReport(ReviewConclusion Conclusion, string Title, s
     private static string Describe(IgnoreEntry entry) =>
         string.Join(", ", entry.Paths.Select(g => GitHubMarkdown.Code(g.Pattern)))
         + (entry.Checks is null ? "" : $" for {string.Join(", ", entry.Checks.Order(StringComparer.Ordinal))}");
+
+    /// <summary>
+    /// One row per effective severity of the check's findings, Error first; a check with no findings gets one row with its
+    /// declared severity. P014 keeps one "Per rule" row; a disabled check one "disabled" row.
+    /// </summary>
+    private static IEnumerable<(string Severity, string Count)> SummaryRows(IPullRequestCheck check, IReadOnlyList<PullRequestFinding> findings, RepoConfig config)
+    {
+        var own = findings.Where(f => f.CheckId == check.Id).ToList();
+        if (!config.IsEnabled(check.Id))
+        {
+            return [(check is RulesFileLint ? "Per rule" : check.Severity.ToString(), "disabled")];
+        }
+
+        if (check is RulesFileLint || own.Count == 0)
+        {
+            return [(check is RulesFileLint ? "Per rule" : check.Severity.ToString(), own.Count.ToString(CultureInfo.InvariantCulture))];
+        }
+
+        return own.GroupBy(f => f.SeverityOr(check.Severity))
+            .OrderByDescending(g => g.Key)
+            .Select(g => (g.Key.ToString(), g.Count().ToString(CultureInfo.InvariantCulture)));
+    }
 }
