@@ -7,16 +7,29 @@ namespace Aibysitter.Rules.PullRequests;
 /// Looks across up to four consecutive added lines. Comments inside the block do not count as handling.
 /// Empty catches of OperationCanceledException / TaskCanceledException (cancellation) are not flagged.
 /// A catch inside a string literal on its line is not code. Generated files are skipped.
+/// A justification comment (<see cref="SwallowedExceptionJustifications"/>) downgrades the finding to Info.
 /// </summary>
-public sealed partial class SwallowedExceptions : IPullRequestCheck
+public sealed partial class SwallowedExceptions : IPullRequestCheck, INotesSource
 {
+    public const string FixHint = "Handle the exception, log it, or let it propagate.";
+
     private const int Window = 4;
 
     public string Id => "P009";
     public string Title => "Swallowed exceptions";
     public Severity Severity => Severity.Warning;
 
-    public IEnumerable<PullRequestFinding> Evaluate(PullRequestContext context)
+    public IEnumerable<PullRequestFinding> Evaluate(PullRequestContext context) =>
+        Review(context).Select(r => r.Justification?.Reason is { } reason
+            ? r.Finding with { Message = $"{r.Finding.Message} Justified: {reason}", Severity = Severity.Info }
+            : r.Finding);
+
+    public IEnumerable<string> Notes(PullRequestContext context) =>
+        Review(context)
+            .Where(r => r.Justification?.Rejection is not null)
+            .Select(r => $"P009 justification at {r.Finding.Path}:{r.Finding.Line} not applied: {r.Justification!.Rejection}.");
+
+    private IEnumerable<(PullRequestFinding Finding, SwallowedExceptionJustification? Justification)> Review(PullRequestContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -45,12 +58,15 @@ public sealed partial class SwallowedExceptions : IPullRequestCheck
                 var match = (python ? ExceptPassRegex() : EmptyCatchRegex()).Match(text, start.Index);
                 if (match.Success && match.Index < added[i].Text.Length + 1 && !CancellationRegex().IsMatch(match.Value))
                 {
-                    yield return new PullRequestFinding(
-                        Id,
-                        file.Path,
-                        added[i].NewLine!.Value,
-                        python ? "Exception swallowed: except block only passes." : "Exception swallowed: empty catch block.",
-                        "Handle the exception, log it, or let it propagate.");
+                    var line = added[i].NewLine!.Value;
+                    yield return (
+                        new PullRequestFinding(
+                            Id,
+                            file.Path,
+                            line,
+                            python ? "Exception swallowed: except block only passes." : "Exception swallowed: empty catch block.",
+                            FixHint),
+                        SwallowedExceptionJustifications.Find(file, line));
                 }
             }
         }

@@ -67,4 +67,62 @@ public class SwallowedExceptionJustificationTests
         Assert.Equal(SwallowedExceptionJustifications.MaxReasonLength + 1, reason.Length);
         Assert.EndsWith("…", reason);
     }
+
+    // In the review: Info with the reason, or the Warning and a summary note.
+
+    private static PullRequestReview Review(RepoConfig config, params string[] lines) =>
+        new PullRequestReviewer([new SwallowedExceptions()]).Review(Context(config, Added("src/A.cs", lines)));
+
+    private static RepoConfig FailOnWarnings(string extra = "") => RepoConfig.Parse("{\"conclusion\": \"fail-on-warnings\"" + extra + "}").Config;
+
+    [Fact]
+    public void Justified_InfoWithReason_Neutral()
+    {
+        var review = Review(FailOnWarnings(), $"// aibysitter-ignore P009: {Reason}", "catch (IOException) { }");
+
+        var finding = Assert.Single(review.Findings);
+        Assert.Equal(Severity.Info, finding.Severity);
+        Assert.Equal(2, finding.Line);
+        Assert.Equal($"Exception swallowed: empty catch block. Justified: {Reason}", finding.Message);
+        Assert.Equal(ReviewConclusion.Neutral, review.Conclusion);
+        Assert.Empty(review.Notes!);
+    }
+
+    [Fact]
+    public void PythonJustified_Info()
+    {
+        var review = new PullRequestReviewer([new SwallowedExceptions()]).Review(Context(Added("tools/a.py", "try:", "    os.remove(p)", $"except OSError:  # aibysitter-ignore P009: {Reason}", "    pass")));
+
+        Assert.Equal($"Exception swallowed: except block only passes. Justified: {Reason}", Assert.Single(review.Findings).Message);
+    }
+
+    [Fact]
+    public void Rejected_WarningStands_NoteSaysWhy_Fails()
+    {
+        var review = Review(FailOnWarnings(), "// aibysitter-ignore P009: optional", "catch (IOException) { }");
+
+        var finding = Assert.Single(review.Findings);
+        Assert.Null(finding.Severity);
+        Assert.Equal("Exception swallowed: empty catch block.", finding.Message);
+        Assert.Equal(["P009 justification at src/A.cs:2 not applied: reason under 10 characters."], review.Notes);
+        Assert.Equal(ReviewConclusion.Failure, review.Conclusion);
+    }
+
+    [Fact]
+    public void OneJustifiedOneNot_Fails()
+    {
+        var review = Review(FailOnWarnings(), $"catch (IOException) {{ }} // aibysitter-ignore P009: {Reason}", "", "catch (Exception) { }");
+
+        Assert.Equal([Severity.Info, (Severity?)null], review.Findings.Select(f => f.Severity));
+        Assert.Equal(ReviewConclusion.Failure, review.Conclusion);
+    }
+
+    [Fact]
+    public void IgnoredFile_NoFindingNoNote()
+    {
+        var review = Review(FailOnWarnings(", \"ignore\": [\"src/**\"]"), "// aibysitter-ignore P009:", "catch (IOException) { }");
+
+        Assert.Empty(review.Findings);
+        Assert.Empty(review.Notes!);
+    }
 }

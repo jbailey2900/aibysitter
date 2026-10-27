@@ -47,8 +47,8 @@ public sealed class PullRequestReviewer
 
         var notes = Checks
             .Where(c => context.Config.IsEnabled(c.Id))
-            .OfType<INotesSource>()
-            .SelectMany(c => c.Notes(context))
+            .Where(c => c is INotesSource)
+            .SelectMany(c => ((INotesSource)c).Notes(ForCheck(c.Id, context)))
             .ToList();
 
         return new PullRequestReview(findings, Conclude(findings, context.Config), notes);
