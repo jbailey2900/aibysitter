@@ -45,6 +45,7 @@ public static class RulesetChangelog
 
     public static IReadOnlyList<ChangelogEntry> AppChecks { get; } =
     [
+        new(null, new DateOnly(2026, 10, 27), "P009 justification", ["A comment \"aibysitter-ignore P009: <reason>\" (//, #, /* */ or <!-- -->) on the catch line or the line above downgrades that P009 finding to Info, with the reason in the message, when the reason has at least 10 characters.", "A marker with no reason, a shorter one, or no ':' after P009 leaves the Warning; the summary says why."]),
         new(null, new DateOnly(2026, 10, 27), "Dogfood 4b tuning", ["P008: justification paths and workflow text match with backslashes as / and no leading ./.", "Editing the PR description re-runs the review only on an open pull request whose Aibysitter: lines changed."]),
         new(null, new DateOnly(2026, 10, 26), "P004 text", ["P004: the finding says to widen scope in a separate PR merged first, or move the file to its own PR."]),
         new(null, new DateOnly(2026, 10, 21), "P008 justification", ["A line \"Aibysitter: P008 <removed test path> -> <replacement path>\" in the PR description downgrades that P008 finding to Info when the replacement is in the head commit and is a test file or is named in a workflow under .github/workflows/.", "A line that fails a condition leaves the finding as it is; the summary says which condition failed.", "Editing the PR description re-runs the review."]),
