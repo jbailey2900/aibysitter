@@ -115,6 +115,19 @@ Aibysitter: P008 tests/Orders/OrderServiceTests.cs -> tests/Orders/OrderTests.cs
 - Adding, removing or changing an `Aibysitter:` line in the description of an open pull request re-runs the review; no push is needed. Other edits do not.
 - Paths are from the repository root, without spaces. `\` is read as `/`, and a leading `./` is dropped.
 
+## Justifying a swallowed exception
+
+An empty catch block (or `except: pass`) gets a P009 Warning. When swallowing the exception is correct, say why in a comment on the catch line or alone on the line above:
+
+```
+// aibysitter-ignore P009: best-effort temp cleanup; a locked file is retried next run
+catch (IOException) { }
+```
+
+- `//`, `#`, `/* … */` and `<!-- … -->` comments are read.
+- The finding drops to Info when the reason has at least 10 characters. The finding shows the reason (up to 200 characters).
+- No reason, a shorter one, or no `:` after `P009` leaves the Warning; the summary says why.
+
 ## Failing the build
 
 1. Set `"conclusion": "fail-on-warnings"` (or `"fail-on-errors"` to fail on Error findings only).

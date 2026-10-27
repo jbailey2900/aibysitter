@@ -34,6 +34,7 @@
         }
     </ul>
     <p>A deleted test can be justified in the pull request description with <code>Aibysitter: P008 &lt;removed test path&gt; -&gt; &lt;replacement path&gt;</code>. The P008 finding drops to Info when the replacement is in the head commit and is a test file or is named in a workflow under <code>.github/workflows/</code>.</p>
+    <p>A swallowed exception can be justified with a comment on the catch line or the line above, <code>// aibysitter-ignore P009: &lt;reason&gt;</code> (also <code>#</code>, <code>/* */</code> and <code>&lt;!-- --&gt;</code>). The P009 finding drops to Info and shows the reason when it has at least 10 characters.</p>
 </section>
 
 <figure class="terminal" aria-label="Example check run">
