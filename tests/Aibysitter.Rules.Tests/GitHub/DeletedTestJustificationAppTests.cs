@@ -82,33 +82,50 @@ public class DeletedTestJustificationAppTests(WebApplicationFactory<Program> fac
         Assert.DoesNotContain("description", fake.Calls);
     }
 
-    private static string EditedPayload(object changes) =>
+    private const string Line = $"Aibysitter: P008 {Removed} -> tools/smoke.ps1";
+
+    private static string EditedPayload(object changes, string? body = null, string state = "open") =>
         JsonSerializer.Serialize(new
         {
             action = "edited",
             changes,
             installation = new { id = 42 },
             repository = new { name = "sandbox", owner = new { login = "jbailey2900" } },
-            pull_request = new { number = 7, head = new { sha = "0123456789abcdef0123456789abcdef01234567" }, @base = new { sha = BaseSha } },
+            pull_request = new { number = 7, state, body, head = new { sha = "0123456789abcdef0123456789abcdef01234567" }, @base = new { sha = BaseSha } },
         });
 
-    [Fact]
-    public async Task EditedWithDescriptionChange_Reviewed()
+    private async Task<HttpStatusCode> SendEdited(string payload)
     {
         var (client, _) = GitHubWebhookTests.Create(factory, new FakeGitHubGateway(), runWorker: false);
-
-        var response = await client.SendAsync(Request("pull_request", EditedPayload(new { body = new { from = "old" } })));
-
-        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        return (await client.SendAsync(Request("pull_request", payload))).StatusCode;
     }
+
+    public static TheoryData<string?, string?> JustificationChanges() => new()
+    {
+        { "Moves the tests.", $"Moves the tests.\n\n{Line}" },
+        { $"Moves the tests.\r\n{Line}", "Moves the tests." },
+        { Line, $"Aibysitter: P008 {Removed} -> tests/Orders/OrderTests.cs" },
+        { null, Line },
+    };
+
+    [Theory]
+    [MemberData(nameof(JustificationChanges))]
+    public async Task EditedAibysitterLines_Reviewed(string? from, string? to) =>
+        Assert.Equal(HttpStatusCode.Accepted, await SendEdited(EditedPayload(new { body = new { from } }, to)));
+
+    [Theory]
+    [InlineData("Moves the tests.", "Moves the order tests.")]
+    [InlineData($"Old text.\n{Line}", $"New text.\r\n  {Line}  ")]
+    [InlineData(null, "Moves the tests.")]
+    [InlineData("Moves the tests.", null)]
+    public async Task EditedOtherText_NotReviewed(string? from, string? to) =>
+        Assert.Equal(HttpStatusCode.NoContent, await SendEdited(EditedPayload(new { body = new { from } }, to)));
 
     [Fact]
-    public async Task EditedTitleOnly_NotReviewed()
-    {
-        var (client, _) = GitHubWebhookTests.Create(factory, new FakeGitHubGateway(), runWorker: false);
+    public async Task EditedOnClosedPullRequest_NotReviewed() =>
+        Assert.Equal(HttpStatusCode.NoContent, await SendEdited(EditedPayload(new { body = new { from = "Moves the tests." } }, Line, state: "closed")));
 
-        var response = await client.SendAsync(Request("pull_request", EditedPayload(new { title = new { from = "old" } })));
-
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-    }
+    [Fact]
+    public async Task EditedTitleOnly_NotReviewed() =>
+        Assert.Equal(HttpStatusCode.NoContent, await SendEdited(EditedPayload(new { title = new { from = "old" } }, Line)));
 }

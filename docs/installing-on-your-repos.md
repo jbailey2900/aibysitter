@@ -112,8 +112,8 @@ Aibysitter: P008 tests/Orders/OrderServiceTests.cs -> tests/Orders/OrderTests.cs
 
 - The finding drops to Info when the replacement is in the head commit and is a test file, or a workflow file under `.github/workflows/` names its path. The finding names the replacement and the workflow.
 - A line that fails a condition leaves the Error as it is; the summary says which condition failed.
-- Editing the description re-runs the review; no push is needed.
-- Paths are from the repository root, without spaces.
+- Adding, removing or changing an `Aibysitter:` line in the description of an open pull request re-runs the review; no push is needed. Other edits do not.
+- Paths are from the repository root, without spaces. `\` is read as `/`, and a leading `./` is dropped.
 
 ## Failing the build
 

@@ -45,6 +45,7 @@ public static class RulesetChangelog
 
     public static IReadOnlyList<ChangelogEntry> AppChecks { get; } =
     [
+        new(null, new DateOnly(2026, 10, 27), "Dogfood 4b tuning", ["P008: justification paths and workflow text match with backslashes as / and no leading ./.", "Editing the PR description re-runs the review only on an open pull request whose Aibysitter: lines changed."]),
         new(null, new DateOnly(2026, 10, 26), "P004 text", ["P004: the finding says to widen scope in a separate PR merged first, or move the file to its own PR."]),
         new(null, new DateOnly(2026, 10, 21), "P008 justification", ["A line \"Aibysitter: P008 <removed test path> -> <replacement path>\" in the PR description downgrades that P008 finding to Info when the replacement is in the head commit and is a test file or is named in a workflow under .github/workflows/.", "A line that fails a condition leaves the finding as it is; the summary says which condition failed.", "Editing the PR description re-runs the review."]),
         new(null, new DateOnly(2026, 10, 20), "P001 guard window", ["P001: a guard's throw or exit may follow a multi-line condition, up to 10 lines on, with no blank line or GO between."]),

@@ -42,6 +42,33 @@ public class DeletedTestJustificationTests
         Assert.Empty(notes);
     }
 
+    [Fact]
+    public void WorkflowWithWindowsPath_Accepted()
+    {
+        var workflows = new Dictionary<string, string> { [".github/workflows/ci.yml"] = "steps:\n  - run: .\\tools\\smoke.ps1 -SelfTest\n" };
+
+        var (findings, notes) = Review(Context($"Aibysitter: P008 {Removed} -> tools/smoke.ps1", workflows: workflows));
+
+        Assert.Equal($"Test file deleted: {Removed}. Replaced by tools/smoke.ps1 (referenced by .github/workflows/ci.yml).", Assert.Single(findings).Message);
+        Assert.Empty(notes);
+    }
+
+    [Theory]
+    [InlineData("./tools/smoke.ps1")]
+    [InlineData(".\\tools\\smoke.ps1")]
+    [InlineData("tools\\smoke.ps1")]
+    public void JustificationPath_Normalised(string replacement)
+    {
+        var workflows = new Dictionary<string, string> { [".github/workflows/ci.yml"] = "steps:\n  - run: pwsh tools/smoke.ps1\n" };
+
+        var (findings, notes) = Review(Context($"Aibysitter: P008 {Removed} -> {replacement}", workflows: workflows));
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(Severity.Info, finding.Severity);
+        Assert.Equal($"Test file deleted: {Removed}. Replaced by tools/smoke.ps1 (referenced by .github/workflows/ci.yml).", finding.Message);
+        Assert.Empty(notes);
+    }
+
     public static TheoryData<string, IReadOnlyCollection<string>?, string> Rejected() => new()
     {
         { $"Aibysitter: P008 {Removed} -> tests/Orders/Gone.cs", null, $"P008 justification for {Removed} not applied: tests/Orders/Gone.cs is not in the head commit." },
