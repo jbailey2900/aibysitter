@@ -200,4 +200,53 @@ public class Dogfood4TuningTests
     [InlineData("docs/setup.md", FileChangeStatus.Modified, "@@ -1,1 +1,1 @@\n+Set ::DB_NAME:: first.", false)]
     public void P001_NeedsHeadContent(string path, FileChangeStatus status, string patch, bool expected) =>
         Assert.Equal(expected, PlaceholderIdentifiers.NeedsHeadContent(new ChangedFile(path, status, patch)));
+
+    // P010 transitive pins (dogfood 5): a PackageVersion with no PackageReference in the pull request is Info.
+
+    private const string Props = "Directory.Packages.props";
+
+    [Fact]
+    public void P010_PackageVersionsAlone_InfoEach_Neutral()
+    {
+        var config = RepoConfig.Parse("{\"conclusion\": \"fail-on-warnings\"}").Config;
+        var props = Modified(Props, "@@ -20,1 +20,4 @@\n <ItemGroup>\n+  <PackageVersion Include=\"Microsoft.Data.SqlClient\" Version=\"7.1.1\" />\n+  <PackageVersion Include=\"Serilog\" Version=\"4.4.0\" />\n+  <PackageVersion Include=\"Microsoft.Bcl.AsyncInterfaces\" Version=\"10.0.14\" />");
+
+        var review = new PullRequestReviewer([new NewDependencies()]).Review(Context(config, props));
+
+        Assert.Equal(["Version pinned (transitive): Microsoft.Data.SqlClient", "Version pinned (transitive): Serilog", "Version pinned (transitive): Microsoft.Bcl.AsyncInterfaces"], review.Findings.Select(f => f.Message));
+        Assert.All(review.Findings, f => Assert.Equal(Severity.Info, f.Severity));
+        Assert.Equal(ReviewConclusion.Neutral, review.Conclusion);
+    }
+
+    [Fact]
+    public void P010_PackageVersionAndReference_WarningOnReferenceLine()
+    {
+        var finding = Assert.Single(Run(new NewDependencies(),
+            Modified(Props, "@@ -20,1 +20,2 @@\n <ItemGroup>\n+  <PackageVersion Include=\"Polly\" Version=\"8.4.0\" />"),
+            Modified("src/Web/Web.csproj", "@@ -10,1 +10,2 @@\n <ItemGroup>\n+  <PackageReference Include=\"Polly\" />")));
+
+        Assert.Equal(("src/Web/Web.csproj", 11, "New dependency: Polly"), (finding.Path, finding.Line, finding.Message));
+        Assert.Null(finding.Severity);
+    }
+
+    [Fact]
+    public void P010_ReferenceToExistingPackageVersion_Warning()
+    {
+        var finding = Assert.Single(Run(new NewDependencies(), Modified("src/Web/Web.csproj", "@@ -10,1 +10,2 @@\n <ItemGroup>\n+  <PackageReference Include=\"Polly\" />")));
+
+        Assert.Equal("New dependency: Polly", finding.Message);
+        Assert.Null(finding.Severity);
+    }
+
+    [Fact]
+    public void P010_PackageVersionChange_NotFlagged() =>
+        Assert.Empty(Run(new NewDependencies(), Modified(Props, "@@ -20,2 +20,2 @@\n <ItemGroup>\n-  <PackageVersion Include=\"System.Security.Cryptography.Pkcs\" Version=\"9.0.21\" />\n+  <PackageVersion Include=\"System.Security.Cryptography.Pkcs\" Version=\"10.0.14\" />")));
+
+    [Fact]
+    public void P010_PackageVersionInOtherProps_Info() =>
+        Assert.Equal(Severity.Info, Assert.Single(Run(new NewDependencies(), Modified("build/Versions.props", "@@ -1,1 +1,2 @@\n <ItemGroup>\n+  <PackageVersion Include=\"Polly\" Version=\"8.4.0\" />"))).Severity);
+
+    [Fact]
+    public void P010_NonCentralReferenceWithVersion_Warning() =>
+        Assert.Null(Assert.Single(Run(new NewDependencies(), Modified("src/Web/Web.csproj", "@@ -10,1 +10,2 @@\n <ItemGroup>\n+  <PackageReference Include=\"Polly\" Version=\"8.4.0\" />"))).Severity);
 }

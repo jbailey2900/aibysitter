@@ -109,7 +109,7 @@ public class Dogfood1TuningTests
     // P010
 
     [Fact]
-    public void P010_CentralPackageManagement_OneFindingOnPackageVersion()
+    public void P010_CentralPackageManagement_OneWarningOnFirstPackageReference()
     {
         var findings = Run(new NewDependencies(),
             Added("src/Web/Web.csproj", "<PackageReference Include=\"Markdig\" />"),
@@ -117,7 +117,8 @@ public class Dogfood1TuningTests
             Added("src/Data/Data.csproj", "<PackageReference Include=\"markdig\" />"));
 
         var finding = Assert.Single(findings);
-        Assert.Equal("Directory.Packages.props", finding.Path);
+        Assert.Equal("src/Data/Data.csproj", finding.Path);
+        Assert.Null(finding.Severity);
         Assert.Equal("New dependency: Markdig", finding.Message);
     }
 
