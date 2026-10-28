@@ -5,7 +5,9 @@ namespace Aibysitter.Rules.PullRequests;
 /// <summary>
 /// Packages added by the pull request: .csproj / .props PackageReference and PackageVersion, package.json dependency
 /// sections, requirements*.txt, go.mod require. A name both removed and added in the same file (version change) is not new.
-/// One finding per package per ecosystem; with central package management it is on the PackageVersion line.
+/// One finding per package per ecosystem. With central package management, a PackageVersion is a Warning only when the pull
+/// request also adds a PackageReference for it (reported on the first such line, by path); a PackageVersion alone is Info,
+/// "Version pinned (transitive)".
 /// </summary>
 public sealed partial class NewDependencies : IPullRequestCheck
 {
@@ -29,14 +31,23 @@ public sealed partial class NewDependencies : IPullRequestCheck
 
         return Added(context)
             .GroupBy(a => (a.Ecosystem, Package: a.Package.ToUpperInvariant()))
-            .Select(g => g.OrderByDescending(a => a.Line.Text.Contains("<PackageVersion", StringComparison.OrdinalIgnoreCase)).First())
-            .Select(a => new PullRequestFinding(
-                Id,
-                a.Path,
-                a.Line.NewLine!.Value,
-                $"New dependency: {a.Package}",
-                "Confirm the package was requested, or remove it and use what the project already has."));
+            .Select(g =>
+            {
+                var versions = g.Where(IsPackageVersion).ToList();
+                var references = g.Where(a => !IsPackageVersion(a)).OrderBy(a => a.Path, StringComparer.Ordinal).ThenBy(a => a.Line.NewLine).ToList();
+                var name = versions.Count > 0 ? versions[0].Package : references[0].Package;
+                return references.Count == 0
+                    ? new PullRequestFinding(Id, versions[0].Path, versions[0].Line.NewLine!.Value, $"Version pinned (transitive): {name}", PinFixHint, Severity.Info)
+                    : new PullRequestFinding(Id, references[0].Path, references[0].Line.NewLine!.Value, $"New dependency: {name}", FixHint);
+            });
     }
+
+    private const string FixHint = "Confirm the package was requested, or remove it and use what the project already has.";
+
+    private const string PinFixHint = "No project references the package in this pull request; the entry sets the version of a transitive dependency.";
+
+    private static bool IsPackageVersion((string Ecosystem, string Path, DiffLine Line, string Package) entry) =>
+        entry.Ecosystem == "nuget" && PackageVersionRegex().IsMatch(entry.Line.Text);
 
     private static IEnumerable<(string Ecosystem, string Path, DiffLine Line, string Package)> Added(PullRequestContext context)
     {
@@ -137,6 +148,9 @@ public sealed partial class NewDependencies : IPullRequestCheck
 
     [GeneratedRegex(@"<Package(?:Reference|Version)\s+(?:[^>]*\s)?Include\s*=\s*""(?<name>[^""]+)""", RegexOptions.IgnoreCase)]
     private static partial Regex PackageReferenceRegex();
+
+    [GeneratedRegex(@"<PackageVersion\s", RegexOptions.IgnoreCase)]
+    private static partial Regex PackageVersionRegex();
 
     [GeneratedRegex(@"^requirements[\w.-]*\.txt$", RegexOptions.IgnoreCase)]
     private static partial Regex RequirementsFileRegex();

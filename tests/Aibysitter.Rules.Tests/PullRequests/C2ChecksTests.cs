@@ -109,9 +109,12 @@ public class NewDependenciesTests
     }
 
     [Fact]
-    public void DirectoryPackagesProps_PackageVersion_Flagged()
+    public void DirectoryPackagesProps_PackageVersionAlone_Info()
     {
-        Assert.Single(Run("Directory.Packages.props", "@@ -1,1 +1,2 @@\n <ItemGroup>\n+  <PackageVersion Include=\"Polly\" Version=\"8.4.0\" />"));
+        var finding = Assert.Single(Run("Directory.Packages.props", "@@ -1,1 +1,2 @@\n <ItemGroup>\n+  <PackageVersion Include=\"Polly\" Version=\"8.4.0\" />"));
+
+        Assert.Equal(Severity.Info, finding.Severity);
+        Assert.Equal("Version pinned (transitive): Polly", finding.Message);
     }
 
     [Fact]
