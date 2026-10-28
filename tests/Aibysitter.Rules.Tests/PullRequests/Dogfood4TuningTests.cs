@@ -188,4 +188,16 @@ public class Dogfood4TuningTests
         Assert.Equal("Outside declared scope (modified): README.md. Widen `scope` in a separate PR merged first, or move the file to its own PR.", finding.Message);
         Assert.Equal($"Add the path to \"scope\" in {RepoConfig.FilePath}, or move the change to a pull request of its own.", finding.FixHint);
     }
+
+    // P001 head content (dogfood 5): the head decides the template rules on edited files.
+
+    [Theory]
+    [InlineData("docs/sql/setup.sql", FileChangeStatus.Modified, "@@ -5,1 +5,2 @@\n IF 1 = 1\n+EXEC [::DB_NAME::].dbo.Report;", true)]
+    [InlineData("scripts/a.ps1", FileChangeStatus.Added, "@@ -0,0 +1,1 @@\n+$x = 'YOUR_KEY'", true)]
+    [InlineData("docs/sql/setup.sql", FileChangeStatus.Modified, "@@ -5,2 +5,2 @@\n EXEC [::DB_NAME::].dbo.Report;\n-PRINT 1;\n+PRINT 2;", false)]
+    [InlineData("tests/sql/SetupTests.cs", FileChangeStatus.Modified, "@@ -1,1 +1,1 @@\n+var db = \"::DB_NAME::\";", false)]
+    [InlineData("docs/sql/setup.sql", FileChangeStatus.Removed, "@@ -1,1 +0,0 @@\n-EXEC [::DB_NAME::].dbo.Report;", false)]
+    [InlineData("docs/setup.md", FileChangeStatus.Modified, "@@ -1,1 +1,1 @@\n+Set ::DB_NAME:: first.", false)]
+    public void P001_NeedsHeadContent(string path, FileChangeStatus status, string patch, bool expected) =>
+        Assert.Equal(expected, PlaceholderIdentifiers.NeedsHeadContent(new ChangedFile(path, status, patch)));
 }

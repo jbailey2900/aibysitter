@@ -14,7 +14,19 @@ public sealed partial class PlaceholderIdentifiers : AddedLinePatternCheck
     protected override string FixHint => "Replace with the real identifier or value.";
 
     /// <summary>Code and config files outside test files.</summary>
-    protected override bool AppliesTo(string path) => FileKinds.IsCodeOrConfig(path) && !FileKinds.IsTestFile(path);
+    protected override bool AppliesTo(string path) => AppliesToPath(path);
+
+    private static bool AppliesToPath(string path) => FileKinds.IsCodeOrConfig(path) && !FileKinds.IsTestFile(path);
+
+    /// <summary>
+    /// The head content decides whether the file is a guarded or documented template: P001 applies to the file and an added line
+    /// holds a placeholder. Without it, the guard and documenting comments are looked for in the diff only.
+    /// </summary>
+    public static bool NeedsHeadContent(ChangedFile file)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        return file.Status != FileChangeStatus.Removed && AppliesToPath(file.Path) && file.AddedLines.Any(l => PlaceholderRegex().IsMatch(l.Text));
+    }
 
     /// <summary>
     /// Not findings: comment lines (including inside block comments and docstrings), test-data attributes

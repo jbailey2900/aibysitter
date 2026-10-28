@@ -44,7 +44,7 @@ public class ReviewProcessorTests
 
         Assert.Equal(ReviewConclusion.Neutral, report.Conclusion);
         Assert.Equal("1 finding (1 error, 0 warnings)", report.Title);
-        Assert.Equal(new[] { "in_progress 99", "files", "content .github/aibysitter.json", "complete 99" }, fake.Calls);
+        Assert.Equal(new[] { "in_progress 99", "files", "content .github/aibysitter.json", "content src/A.cs", "complete 99" }, fake.Calls);
     }
 
     [Fact]
