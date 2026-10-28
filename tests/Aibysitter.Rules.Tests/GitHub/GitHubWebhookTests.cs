@@ -173,7 +173,7 @@ public class GitHubWebhookTests(WebApplicationFactory<Program> factory)
         Assert.Equal(Aibysitter.Rules.PullRequests.ReviewConclusion.Failure, report.Conclusion);
         Assert.Equal("P001 Placeholder identifiers", Assert.Single(report.Annotations).Title);
         Assert.Equal(
-            new[] { "create jbailey2900/sandbox#7@0123456", "in_progress 777", "files", "base content .github/aibysitter.json", "complete 777" },
+            new[] { "create jbailey2900/sandbox#7@0123456", "in_progress 777", "files", "base content .github/aibysitter.json", "content src/OrderService.cs", "complete 777" },
             fake.Calls);
     }
 }

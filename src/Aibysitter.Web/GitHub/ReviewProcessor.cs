@@ -52,7 +52,8 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
 
             // Rules files are fetched first so the shared cap never starves P014. Symlinked rules files are not fetched:
             // GitHub returns the target's content under the link's path.
-            var toFetch = files.Where(NeedsHeadContent)
+            var placeholderFiles = files.Where(f => NeedsHeadForPlaceholders(f, config)).Select(f => f.Path).ToHashSet(StringComparer.Ordinal);
+            var toFetch = files.Where(f => NeedsHeadContent(f) || placeholderFiles.Contains(f.Path))
                 .Where(f => !symlinks.Contains(f))
                 .OrderBy(f => RulesFileLint.IsRulesFile(f) ? 0 : 1)
                 .Take(MaxContentFetches)
@@ -65,6 +66,12 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
                 enriched.Add(toFetch.Contains(file.Path)
                     ? file with { HeadContent = await budget.ReadAsync(file.Path, () => gateway.GetFileContentAsync(pr, file.Path, reviewToken)) }
                     : file);
+            }
+
+            var diffOnly = enriched.Where(f => placeholderFiles.Contains(f.Path) && f.HeadContent is null).Select(f => f.Path).ToList();
+            if (diffOnly.Count > 0)
+            {
+                notes.Add(DiffOnlyNote(diffOnly));
             }
 
             var (repo, unchanged) = await BuildRepoViewAsync(pr, files, enriched, config, tree, notes, budget, reviewToken);
@@ -300,6 +307,18 @@ public sealed class ReviewProcessor(IGitHubGateway gateway, PullRequestReviewer 
 
         return (new RepoSnapshot(paths, p => contents.GetValueOrDefault(p)), unchanged);
     }
+
+    /// <summary>P001 runs on the file and an added line holds a placeholder: the head shows whether it is a guarded or documented template.</summary>
+    internal static bool NeedsHeadForPlaceholders(ChangedFile file, RepoConfig config) =>
+        config.IsEnabled(PlaceholderCheckId) && !config.IsIgnored(PlaceholderCheckId, file.Path) && PlaceholderIdentifiers.NeedsHeadContent(file);
+
+    private const string PlaceholderCheckId = "P001";
+
+    public const string DiffOnlyNotePrefix = "Head not fetched; guarded-template check used the diff only";
+
+    /// <summary>At most 10 names, as the read-budget notes.</summary>
+    internal static string DiffOnlyNote(IReadOnlyList<string> paths) =>
+        $"{DiffOnlyNotePrefix}: {string.Join(", ", paths.Take(10))}{(paths.Count > 10 ? $", and {paths.Count - 10} more" : "")}.";
 
     internal static bool NeedsHeadContent(ChangedFile file) =>
         RulesFileLint.IsRulesFile(file)
