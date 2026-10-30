@@ -96,6 +96,11 @@
                 <td>None</td>
             </tr>
             <tr>
+                <td><code>dependencies</code></td>
+                <td><code>{ "approved": [ { "name", "version", "reason" } ] }</code>: a new PackageReference whose version is in an entry for its name drops P010 to Info, with the reason. Version exact or a NuGet range; no wildcards; all three fields required. Read from the base branch. An admin bypass waives every required check; an entry waives only P010 for that package.</td>
+                <td>None</td>
+            </tr>
+            <tr>
                 <td><code>comment</code></td>
                 <td><code>true</code> posts one comment on the pull request with the summary table and up to 25 findings linked to their lines. Each new commit updates the same comment. No comment is created while there are no findings.</td>
                 <td><code>false</code></td>

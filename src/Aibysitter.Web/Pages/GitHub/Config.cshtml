@@ -38,6 +38,10 @@
     <textarea asp-for="Ignore" rows="3" spellcheck="false" placeholder="docs/**&#10;tests/fixtures/**" aria-describedby="ignore-help"></textarea>
     <p class="note" id="ignore-help">One glob per line. Matching files are skipped by content checks; P004, P008, P011, P013 and P014 still see them. To ignore a path for some checks only, edit the file: <code>{ "paths": ["tests/**"], "checks": ["P005"] }</code>.</p>
     <span asp-validation-for="Ignore" class="error"></span>
+    <label for="Approved">Approved dependencies</label>
+    <textarea asp-for="Approved" rows="3" spellcheck="false" placeholder="AspNet.Security.OAuth.Apple 10.0.0 Sign in with Apple, plan step 10&#10;Polly [8.0,9.0) Retries for the payment client" aria-describedby="approved-help"></textarea>
+    <p class="note" id="approved-help">One package per line: name, version, reason. The version is exact (<code>10.0.0</code>) or a range (<code>[8.0,9.0)</code>); no wildcards. A new PackageReference whose version matches drops P010 to Info. Read from the base branch: merge the entry before the pull request that adds the package. A bypass waives every required check; an entry waives only this one.</p>
+    <span asp-validation-for="Approved" class="error"></span>
     <fieldset>
         <legend>Conclusion</legend>
         <label class="choice"><input type="radio" name="Conclusion" value="@ConclusionMode.Advisory" checked="@(Model.Conclusion == ConclusionMode.Advisory ? "checked" : null)" /> <code>advisory</code>: trial mode; findings report as neutral.</label>

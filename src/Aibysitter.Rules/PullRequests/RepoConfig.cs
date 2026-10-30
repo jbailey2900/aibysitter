@@ -20,6 +20,9 @@ public sealed record ConfigError(int Line, string Message)
 /// <summary>An <c>ignore</c> entry: paths excluded from the listed content checks, or from every content check when Checks is null.</summary>
 public sealed record IgnoreEntry(IReadOnlyList<Glob> Paths, IReadOnlySet<string>? Checks);
 
+/// <summary>A <c>dependencies.approved</c> entry: a package P010 reports as Info when a new reference's version is in <paramref name="Version"/>.</summary>
+public sealed record ApprovedDependency(string Name, VersionRange Version, string Reason);
+
 /// <summary>Parsed <c>.github/aibysitter.json</c>.</summary>
 public sealed partial record RepoConfig(IReadOnlyList<Glob> Scope, ConclusionMode Conclusion)
 {
@@ -51,6 +54,11 @@ public sealed partial record RepoConfig(IReadOnlyList<Glob> Scope, ConclusionMod
 
     /// <summary>Entries under <c>ignore</c>, in file order.</summary>
     public IReadOnlyList<IgnoreEntry> Ignore { get; init; } = [];
+
+    public const int MaxApprovedDependencies = 100;
+
+    /// <summary>Entries under <c>dependencies.approved</c>, in file order.</summary>
+    public IReadOnlyList<ApprovedDependency> ApprovedDependencies { get; init; } = [];
 
     public bool HasScope => Scope.Count > 0;
 
@@ -100,6 +108,7 @@ public sealed partial record RepoConfig(IReadOnlyList<Glob> Scope, ConclusionMod
             var disabled = new HashSet<string>(StringComparer.Ordinal);
             var comment = false;
             var ignore = new List<IgnoreEntry>();
+            var approved = new List<ApprovedDependency>();
 
             foreach (var property in doc.RootElement.EnumerateObject())
             {
@@ -197,14 +206,101 @@ public sealed partial record RepoConfig(IReadOnlyList<Glob> Scope, ConclusionMod
                     case "comment":
                         Error("comment", "\"comment\" must be true or false");
                         break;
+                    case "dependencies" when property.Value.ValueKind == JsonValueKind.Object:
+                        foreach (var section in property.Value.EnumerateObject())
+                        {
+                            if (section.Name != "approved" || section.Value.ValueKind != JsonValueKind.Array)
+                            {
+                                Error($"dependencies.{section.Name}", section.Name == "approved"
+                                    ? "\"dependencies.approved\" must be an array of {\"name\", \"version\", \"reason\"} objects"
+                                    : $"unknown key \"dependencies.{section.Name}\"");
+                                continue;
+                            }
+
+                            var approvedIndex = 0;
+                            foreach (var item in section.Value.EnumerateArray())
+                            {
+                                var key = $"dependencies.approved[{approvedIndex++}]";
+                                if (approvedIndex > MaxApprovedDependencies)
+                                {
+                                    Error(key, $"\"dependencies.approved\" has more than {MaxApprovedDependencies} entries; the rest are skipped");
+                                    break;
+                                }
+
+                                if (ParseApprovedDependency(item, out var message) is { } entry)
+                                {
+                                    approved.Add(entry);
+                                }
+                                else
+                                {
+                                    Error(key, $"dependencies.approved entry {item.GetRawText()}: {message}");
+                                }
+                            }
+                        }
+
+                        break;
+                    case "dependencies":
+                        Error("dependencies", "\"dependencies\" must be an object with \"approved\"");
+                        break;
                     default:
                         Error(property.Name, $"unknown key \"{property.Name}\"");
                         break;
                 }
             }
 
-            return (new RepoConfig(scope, conclusion) { Disabled = disabled, Comment = comment, Ignore = ignore }, errors);
+            return (new RepoConfig(scope, conclusion) { Disabled = disabled, Comment = comment, Ignore = ignore, ApprovedDependencies = approved }, errors);
         }
+    }
+
+    private static readonly string[] ApprovedFields = ["name", "version", "reason"];
+
+    /// <summary>An object with "name" (exact package name, no wildcards), "version" (<see cref="VersionRange"/>) and "reason", all required.</summary>
+    private static ApprovedDependency? ParseApprovedDependency(JsonElement item, out string? message)
+    {
+        message = null;
+        if (item.ValueKind != JsonValueKind.Object)
+        {
+            message = "must be an object with \"name\", \"version\" and \"reason\"";
+            return null;
+        }
+
+        var values = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var field in item.EnumerateObject())
+        {
+            if (!ApprovedFields.Contains(field.Name))
+            {
+                message = $"unknown field \"{field.Name}\"";
+                return null;
+            }
+
+            if (field.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(field.Value.GetString()))
+            {
+                message = $"\"{field.Name}\" must be a non-empty string";
+                return null;
+            }
+
+            values[field.Name] = field.Value.GetString()!.Trim();
+        }
+
+        if (ApprovedFields.FirstOrDefault(f => !values.ContainsKey(f)) is { } missing)
+        {
+            message = $"\"{missing}\" is required";
+            return null;
+        }
+
+        if (values["name"].Contains('*', StringComparison.Ordinal) || values["version"].Contains('*', StringComparison.Ordinal))
+        {
+            message = "wildcards are not allowed in \"name\" or \"version\"";
+            return null;
+        }
+
+        if (!VersionRange.TryParse(values["version"], out var range))
+        {
+            message = $"\"version\" {values["version"]} is not a version or a [min,max] range";
+            return null;
+        }
+
+        return new ApprovedDependency(values["name"], range!, values["reason"]);
     }
 
     /// <summary>A glob string, or an object with "paths" (globs, required) and "checks" (content check IDs, optional).</summary>
@@ -306,8 +402,9 @@ public sealed partial record RepoConfig(IReadOnlyList<Glob> Scope, ConclusionMod
 
         var lines = new Dictionary<string, int>(StringComparer.Ordinal);
         var reader = new Utf8JsonReader(bytes, new JsonReaderOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
-        string? property = null;
+        string? property = null, section = null;
         var index = 0;
+        var sectionIndex = 0;
         while (reader.Read())
         {
             if (reader.CurrentDepth == 1 && reader.TokenType == JsonTokenType.PropertyName)
@@ -315,6 +412,17 @@ public sealed partial record RepoConfig(IReadOnlyList<Glob> Scope, ConclusionMod
                 property = reader.GetString();
                 lines[property!] = LineAt(reader.TokenStartIndex);
                 index = 0;
+                section = null;
+            }
+            else if (reader.CurrentDepth == 2 && property == "dependencies" && reader.TokenType == JsonTokenType.PropertyName)
+            {
+                section = reader.GetString();
+                lines[$"dependencies.{section}"] = LineAt(reader.TokenStartIndex);
+                sectionIndex = 0;
+            }
+            else if (reader.CurrentDepth == 3 && section is not null && reader.TokenType is not (JsonTokenType.EndArray or JsonTokenType.EndObject or JsonTokenType.PropertyName))
+            {
+                lines.TryAdd($"dependencies.{section}[{sectionIndex++}]", LineAt(reader.TokenStartIndex));
             }
             else if (reader.CurrentDepth == 2 && property is not null && reader.TokenType is not (JsonTokenType.EndArray or JsonTokenType.EndObject or JsonTokenType.PropertyName))
             {

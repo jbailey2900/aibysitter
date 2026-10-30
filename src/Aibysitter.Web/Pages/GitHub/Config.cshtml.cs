@@ -34,6 +34,11 @@ public class ConfigModel : PageModel
     [StringLength(MaxScopeLength, ErrorMessage = "Ignore is limited to 10,000 characters.")]
     public string? Ignore { get; set; }
 
+    /// <summary>One entry per line, <c>&lt;name&gt; &lt;version&gt; &lt;reason…&gt;</c>, written as <c>dependencies.approved</c>.</summary>
+    [BindProperty]
+    [StringLength(MaxScopeLength, ErrorMessage = "Approved dependencies are limited to 10,000 characters.")]
+    public string? Approved { get; set; }
+
     [BindProperty]
     public ConclusionMode Conclusion { get; set; } = ConclusionMode.Advisory;
 
@@ -90,7 +95,7 @@ public class ConfigModel : PageModel
     private void Generate()
     {
         var disable = Checks.Concat(Rules).Select(d => d.Id).Where(id => !IsEnabled(id)).ToList();
-        Json = RepoConfigWriter.Write(RepoConfigWriter.ScopeLines(Scope), Conclusion, disable, Comment, RepoConfigWriter.ScopeLines(Ignore));
+        Json = RepoConfigWriter.Write(RepoConfigWriter.ScopeLines(Scope), Conclusion, disable, Comment, RepoConfigWriter.ScopeLines(Ignore), RepoConfigWriter.ApprovedLines(Approved));
         var (config, errors) = RepoConfig.Parse(Json);
         Errors = errors;
         try
