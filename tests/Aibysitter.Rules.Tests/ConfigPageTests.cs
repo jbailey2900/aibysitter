@@ -11,7 +11,7 @@ public partial class ConfigPageTests(WebApplicationFactory<Program> factory)
 {
     private static readonly string[] AllIds = [.. PullRequestCheckDocs.All.Select(d => d.Id), .. RuleDocs.All.Select(d => d.Id)];
 
-    private async Task<HttpResponseMessage> Post(IEnumerable<string> enabled, string? scope = null, string conclusion = "Advisory", string? path = null, string? handler = null, bool comment = false, string? ignore = null)
+    private async Task<HttpResponseMessage> Post(IEnumerable<string> enabled, string? scope = null, string conclusion = "Advisory", string? path = null, string? handler = null, bool comment = false, string? ignore = null, string? approved = null)
     {
         var client = factory.CreateClient();
         var form = await client.GetStringAsync("/GitHub/Config");
@@ -40,6 +40,11 @@ public partial class ConfigPageTests(WebApplicationFactory<Program> factory)
         if (ignore is not null)
         {
             fields.Add(new("Ignore", ignore));
+        }
+
+        if (approved is not null)
+        {
+            fields.Add(new("Approved", approved));
         }
 
         using var content = new FormUrlEncodedContent(fields);
@@ -131,6 +136,26 @@ public partial class ConfigPageTests(WebApplicationFactory<Program> factory)
         Assert.Contains("&quot;ignore&quot;: [", html, StringComparison.Ordinal);
         Assert.Contains("&quot;tests/fixtures/**&quot;", html, StringComparison.Ordinal);
         Assert.DoesNotContain("<h2>Errors</h2>", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Post_Approved_WritesDependencies_ParsesClean()
+    {
+        var response = await Post(AllIds, approved: "AspNet.Security.OAuth.Apple 10.0.0 Sign in with Apple, plan step 10\n\nPolly  [8.0,9.0)   Retries for the payment client  ");
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.Contains(Encoded("  \"dependencies\": {\n    \"approved\": [\n      {\n        \"name\": \"AspNet.Security.OAuth.Apple\",\n        \"version\": \"10.0.0\",\n        \"reason\": \"Sign in with Apple, plan step 10\"\n      },"), html, StringComparison.Ordinal);
+        Assert.Contains(Encoded("\"reason\": \"Retries for the payment client\""), html, StringComparison.Ordinal);
+        Assert.DoesNotContain("<h2>Errors</h2>", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Post_ApprovedWithoutReason_ShowsError()
+    {
+        var html = await (await Post(AllIds, approved: "Polly 8.4.0")).Content.ReadAsStringAsync();
+
+        Assert.Contains("<h2>Errors</h2>", html, StringComparison.Ordinal);
+        Assert.Contains(Encoded("\"reason\" is required"), html, StringComparison.Ordinal);
     }
 
     [Fact]

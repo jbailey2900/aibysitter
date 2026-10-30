@@ -64,6 +64,7 @@ Optional. Path: `.github/aibysitter.json`. The App reads it from the base branch
 | `conclusion` | `advisory`: findings report as `neutral` (trial mode). `fail-on-warnings`: any Warning or Error finding fails the check; P014 fails only when a rule fires at Error. `fail-on-errors`: any Error finding fails the check. Info findings never fail the check. Under either fail mode, "Review failed" is `failure`. | `advisory` |
 | `disable` | Check IDs (P001–P019 except the withdrawn P003, P012, P017) skip that check. Rule IDs (`R001`–`R016`) skip that rule inside P014. | None |
 | `ignore` | Entries are a path glob (skipped by every content check) or `{ "paths": [globs], "checks": [IDs] }` (skipped by those checks only). Globs as in `scope`. P004, P008, P011, P013 and P014 read paths or rules files and do not apply `ignore`. Up to 50 entries. The summary lists the entries and how many changed files they match. The only key that removes files from checks. | None |
+| `dependencies` | `{ "approved": [ { "name", "version", "reason" } ] }`: NuGet packages a new PackageReference may add without a P010 Warning (see "Approving a dependency"). All three fields required; no wildcards. Up to 100 entries. | None |
 | `comment` | `true`: one comment on the pull request with the summary table and up to 25 findings linked to their lines, updated on each new commit. No comment is created while there are no findings; turning it off leaves an existing comment as it is. | `false` |
 
 - Comments and trailing commas are allowed.
@@ -136,6 +137,27 @@ catch (IOException) { }
 
 ## Troubleshooting
 
+## Approving a dependency
+
+A new PackageReference gets a P010 Warning. When the package is approved, add an entry to `.github/aibysitter.json` in a pull request merged before the one that adds the package (config is read from the base branch):
+
+```json
+"dependencies": {
+  "approved": [
+    { "name": "AspNet.Security.OAuth.Apple", "version": "10.0.0", "reason": "Sign in with Apple, plan step 10" },
+    { "name": "Polly", "version": "[8.0,9.0)", "reason": "Retries for the payment client" }
+  ]
+}
+```
+
+- `name`: the package ID, exact, case-insensitive.
+- `version`: exact (`10.0.0`, also `[10.0.0]`) or a NuGet range (`[a,b]`, `[a,b)`, `(a,b]`, `(a,b)`, `[a,)`, `(,b]`). A bare version is exact here, not a minimum.
+- `reason`: required; shown in the finding.
+- The finding drops to Info, `Approved dependency: <name> (<reason>)`, when the reference's version is in the entry: `VersionOverride` or `Version` on the PackageReference, or a PackageVersion added in the same pull request.
+- A name match with the version outside the entry, or no version in the pull request (a PackageVersion already on the base branch, a floating version), leaves the Warning; the summary says why.
+- An entry with no version or no reason is a config error, listed in the summary.
+- An admin bypass waives every required check on the pull request; an entry waives P010 for that package only. Prefer the entry.
+
 | Symptom | Cause | Fix |
 |---|---|---|
 | No **Aibysitter review** check appears | Repository not selected, or the App lacks Checks permission | Add the repository under **Configure**; accept any pending permission request |
@@ -146,6 +168,8 @@ catch (IOException) { }
 | Summary says "P008 justification for … not applied: … is not in the head commit" | The replacement path is wrong or the file is not in the pull request's head | Fix the path in the description |
 | Summary says "P008 justification for … not applied: … is not a test file and no workflow … references it" | The replacement is not a test file and no workflow file names it | Name a test file, or reference the replacement from a workflow |
 | Summary says "P008 justification for … not applied: no P008 finding for that path" | The removed path in the line does not match a deleted test file | Copy the path from the P008 finding |
+| Summary says "Approved dependency entry for … not applied: version … is outside …" | The reference's version is not in the entry's version | Widen the entry's version in a pull request merged first, or use the approved version |
+| Summary says "Approved dependency entry for … not applied: the pull request does not show the version" | The version comes from a PackageVersion already on the base branch, or is floating | Keep the Warning, or add `VersionOverride` with the approved version |
 | Summary says "R006 skipped" | The repository file list is too large for one GitHub request | None; R006 does not run on that repository |
 | Unexpected P004 findings | `scope` does not cover the path | Add the glob to `scope`, or remove `scope` |
 | Summary says "PR comment not posted: the App needs Pull requests: Read and write" | The installation has not accepted the updated permissions | Accept the pending permission request under **Configure** for Aibysitter |

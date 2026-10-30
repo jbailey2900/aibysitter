@@ -80,4 +80,22 @@ public class RepoConfigWriterTests
         Assert.Empty(errors);
         Assert.True(config.IsIgnored("P001", "docs/a.md"));
     }
+
+    [Fact]
+    public void ApprovedLines_NameVersionReason()
+    {
+        Assert.Equal(
+            [("Polly", "[8.0,9.0)", "Retries for the payment client"), ("Serilog", "4.4.0", null), ("Jint", null, null)],
+            RepoConfigWriter.ApprovedLines(" Polly [8.0,9.0)  Retries for the payment client \n\nSerilog 4.4.0\nJint"));
+    }
+
+    [Fact]
+    public void Write_Approved_RoundTrips()
+    {
+        var json = RepoConfigWriter.Write([], ConclusionMode.FailOnWarnings, [], approved: [("Polly", "8.4.0", "Retries for the payment client")]);
+        var (config, errors) = RepoConfig.Parse(json);
+
+        Assert.Empty(errors);
+        Assert.Equal(("Polly", "8.4.0", "Retries for the payment client"), (config.ApprovedDependencies[0].Name, config.ApprovedDependencies[0].Version.Text, config.ApprovedDependencies[0].Reason));
+    }
 }
