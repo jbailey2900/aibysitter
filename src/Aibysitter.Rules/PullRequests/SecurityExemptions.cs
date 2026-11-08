@@ -6,6 +6,10 @@ namespace Aibysitter.Rules.PullRequests;
 /// Added antiforgery and authorization exemptions in ASP.NET Core code outside test files: [IgnoreAntiforgeryToken],
 /// [AllowAnonymous], .DisableAntiforgery(), .AllowAnonymous(). Comment lines and string literals are skipped.
 /// An exemption that a removed line in the same hunk already carried is an edited line, not a new exemption.
+/// Also authorization requirements removed: [Authorize], RequireAuthenticatedUser() and .RequireAuthorization() with no
+/// added copy left in the file; and a policy or roles argument dropped ([Authorize(Roles = "Admin")] to [Authorize],
+/// .RequireAuthorization(policy) to .RequireAuthorization()) in one hunk. [Authorize] on a Razor Pages handler is skipped
+/// (ignored by the framework, MVC1001).
 /// </summary>
 public sealed partial class SecurityExemptions : AddedLinePatternCheck
 {
@@ -16,6 +20,158 @@ public sealed partial class SecurityExemptions : AddedLinePatternCheck
     protected override Regex Pattern => ExemptionRegex();
     protected override string MessagePrefix => "Security exemption added";
     protected override string FixHint => "Confirm the endpoint needs the exemption and that nothing else relies on the protection.";
+
+    public const string RemovedFixHint = "Confirm who should reach the endpoint now, and that nothing else relied on the requirement.";
+
+    public override IEnumerable<PullRequestFinding> Evaluate(PullRequestContext context) => base.Evaluate(context).Concat(Removals(context));
+
+    private enum Requirement
+    {
+        Authorize,
+        RequireAuthenticatedUser,
+        RequireAuthorization,
+    }
+
+    private sealed record Occurrence(Requirement Kind, string Text, bool HasArguments, int Index, int Hunk);
+
+    private IEnumerable<PullRequestFinding> Removals(PullRequestContext context)
+    {
+        foreach (var file in context.Files.Where(f => f.Status != FileChangeStatus.Removed && AppliesTo(f.Path) && !CodeText.IsGenerated(f)))
+        {
+            var lines = file.Lines;
+            var hunkOf = new int[lines.Count];
+            var h = 0;
+            var position = 0;
+            foreach (var hunk in Hunks(lines))
+            {
+                foreach (var _ in hunk)
+                {
+                    hunkOf[position++] = h;
+                }
+
+                h++;
+            }
+
+            var removed = Occurrences(lines, hunkOf, DiffLineKind.Removed);
+            var added = Occurrences(lines, hunkOf, DiffLineKind.Added);
+
+            // A policy or roles argument dropped in one hunk: removed with arguments, added without.
+            var paired = new HashSet<Occurrence>();
+            foreach (var bare in added.Where(a => !a.HasArguments && a.Kind is Requirement.Authorize or Requirement.RequireAuthorization))
+            {
+                var dropped = removed.FirstOrDefault(r => r.Kind == bare.Kind && r.HasArguments && r.Hunk == bare.Hunk && !paired.Contains(r));
+                if (dropped is null)
+                {
+                    continue;
+                }
+
+                paired.Add(dropped);
+                paired.Add(bare);
+                if (!(bare.Kind == Requirement.Authorize && OnHandler(lines, bare.Index)))
+                {
+                    yield return new PullRequestFinding(Id, file.Path, lines[bare.Index].NewLine!.Value, $"Authorization requirement dropped: \"{dropped.Text}\" -> \"{bare.Text}\"", RemovedFixHint);
+                }
+            }
+
+            // Removed with no added copy left in the file (an attribute moved within the file is not removed).
+            foreach (var kind in Enum.GetValues<Requirement>())
+            {
+                var gone = removed.Where(r => r.Kind == kind && !paired.Contains(r)).ToList();
+                var kept = added.Count(a => a.Kind == kind && !paired.Contains(a));
+                var unmatched = gone.Count - kept;
+                if (unmatched <= 0)
+                {
+                    continue;
+                }
+
+                var sameHunk = added.Where(a => a.Kind == kind && !paired.Contains(a)).Select(a => a.Hunk).ToHashSet();
+                foreach (var r in gone.OrderBy(r => sameHunk.Contains(r.Hunk) ? 1 : 0).Take(unmatched).OrderBy(r => r.Index))
+                {
+                    if (kind == Requirement.Authorize && OnHandler(lines, r.Index))
+                    {
+                        continue;
+                    }
+
+                    yield return new PullRequestFinding(Id, file.Path, Anchor(lines, r.Index), $"Authorization removed: \"{r.Text}\"", RemovedFixHint);
+                }
+            }
+        }
+    }
+
+    private static List<Occurrence> Occurrences(IReadOnlyList<DiffLine> lines, int[] hunkOf, DiffLineKind kind)
+    {
+        var result = new List<Occurrence>();
+        for (var i = 0; i < lines.Count; i++)
+        {
+            var text = lines[i].Text;
+            if (lines[i].Kind != kind || CodeText.IsCommentOnly(text))
+            {
+                continue;
+            }
+
+            foreach (Match m in RequirementRegex().Matches(text))
+            {
+                if (CodeText.IsInsideStringLiteral(text, m.Index))
+                {
+                    continue;
+                }
+
+                var requirement = m.Groups["authorize"].Success ? Requirement.Authorize
+                    : m.Groups["user"].Success ? Requirement.RequireAuthenticatedUser
+                    : Requirement.RequireAuthorization;
+                var hasArguments = m.Groups["args"].Success && m.Groups["args"].Value.Trim().Length > 0;
+                result.Add(new Occurrence(requirement, m.Value.Trim(), hasArguments, i, hunkOf[i]));
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>The next code line after the attribute (skipping attributes, comments and blank lines) is a Razor Pages handler.</summary>
+    private static bool OnHandler(IReadOnlyList<DiffLine> lines, int index)
+    {
+        var kind = lines[index].Kind;
+        for (var i = index + 1; i < lines.Count; i++)
+        {
+            var line = lines[i];
+            if (line.Kind != DiffLineKind.Context && line.Kind != kind)
+            {
+                continue;
+            }
+
+            var text = line.Text.Trim();
+            if (text.Length == 0 || text.StartsWith('[') || CodeText.IsCommentOnly(line.Text))
+            {
+                continue;
+            }
+
+            return HandlerRegex().IsMatch(text);
+        }
+
+        return false;
+    }
+
+    /// <summary>The new-file line after a removed line, else the one before it, else 1.</summary>
+    private static int Anchor(IReadOnlyList<DiffLine> lines, int index)
+    {
+        for (var i = index + 1; i < lines.Count; i++)
+        {
+            if (lines[i].NewLine is { } next)
+            {
+                return next;
+            }
+        }
+
+        for (var i = index - 1; i >= 0; i--)
+        {
+            if (lines[i].NewLine is { } previous)
+            {
+                return previous;
+            }
+        }
+
+        return 1;
+    }
 
     protected override bool AppliesTo(string path) =>
         !FileKinds.IsTestFile(path) && Path.GetExtension(path).ToLowerInvariant() is ".cs" or ".cshtml" or ".razor";
@@ -91,6 +247,12 @@ public sealed partial class SecurityExemptions : AddedLinePatternCheck
             yield return hunk;
         }
     }
+
+    [GeneratedRegex(@"(?<authorize>\[\s*Authorize\b(?:\s*\((?<args>[^)]*)\))?\s*\]?)|(?<user>\bRequireAuthenticatedUser\s*\(\s*\))|\.\s*RequireAuthorization\s*\((?<args>[^)]*)\)")]
+    private static partial Regex RequirementRegex();
+
+    [GeneratedRegex(@"\bOn(?:Get|Post|Put|Delete|Patch)\w*\s*\(")]
+    private static partial Regex HandlerRegex();
 
     [GeneratedRegex(@"\[\s*(?:IgnoreAntiforgeryToken|AllowAnonymous)\b|\.\s*(?:DisableAntiforgery|AllowAnonymous)\s*\(\s*\)")]
     private static partial Regex ExemptionRegex();
