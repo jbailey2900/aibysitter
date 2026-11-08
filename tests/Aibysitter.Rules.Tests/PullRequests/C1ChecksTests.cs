@@ -46,6 +46,11 @@ public class SkippedTestsTests
     [InlineData("tests/A.cs", "[Test, Category(\"slow\"), Ignore(\"x\")]")]
     [InlineData("src/a.test.ts", "it.skip('works', () => {")]
     [InlineData("src/a.test.ts", "describe.skip('suite', () => {")]
+    [InlineData("tests/ui/a.spec.js", "test.skip(\"share\", async ({ page }) => {")]
+    [InlineData("tests/ui/a.spec.js", "test.skip(`share ${n}`, async ({ page }) => {")]
+    [InlineData("tests/ui/a.spec.js", "test.describe.skip('share', () => {")]
+    [InlineData("tests/ui/a.spec.js", "  test.skip();")]
+    [InlineData("tests/ui/a.spec.js", "  test.skip(true, 'not ready');")]
     [InlineData("src/a.test.js", "xit('works', () => {")]
     [InlineData("src/a.test.js", "xtest('works', () => {")]
     [InlineData("tests/test_a.py", "@pytest.mark.skip(reason=\"flaky\")")]
@@ -72,6 +77,10 @@ public class SkippedTestsTests
     [InlineData("src/a.ts", "process.exit(1)")]
     [InlineData("src/a.ts", "const skip = items.skip(3)")]
     [InlineData("README.md", "Use it.skip( to skip a test.")]
+    [InlineData("tests/ui/share-banner.spec.js", "  test.skip(hasShare, 'This browser has the Web Share API; the fallback is not shown.');")]
+    [InlineData("tests/ui/a.spec.js", "  test.skip(({ browserName }) => browserName === 'webkit', 'no clipboard');")]
+    [InlineData("tests/ui/a.spec.js", "  test.skip(!process.env.IQC_TEST_SQL, 'needs SQL Server');")]
+    [InlineData("tests/ui/a.spec.js", "  test.skip(browserName === 'firefox');")]
     public void DoesNotFlag(string path, string line)
     {
         Assert.Empty(_check.Evaluate(Context(Added(path, line))));
