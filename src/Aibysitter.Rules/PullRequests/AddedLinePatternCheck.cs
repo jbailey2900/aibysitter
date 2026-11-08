@@ -22,7 +22,7 @@ public abstract class AddedLinePatternCheck : IPullRequestCheck
     /// <summary>The matches on one added line that become a finding. Default: all.</summary>
     protected virtual IEnumerable<string> Keep(ChangedFile file, DiffLine line, IReadOnlyList<string> matches) => matches;
 
-    public IEnumerable<PullRequestFinding> Evaluate(PullRequestContext context)
+    public virtual IEnumerable<PullRequestFinding> Evaluate(PullRequestContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
