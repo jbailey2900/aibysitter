@@ -49,5 +49,5 @@ public class CopyAuditTests(WebApplicationFactory<Program> factory)
 
     [Fact]
     public void Contributing_ListsEveryIgnoreEntry() =>
-        Assert.Contains("`tests/**` for P005, and the P001 source for P001", Repo("CONTRIBUTING.md"));
+        Assert.Contains("`tests/**` for P005, `tests/**` and the P006 source for P006, and the P001 source for P001", Repo("CONTRIBUTING.md"));
 }

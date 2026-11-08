@@ -55,6 +55,9 @@ public class ContributingTests
         Assert.False(config.IsIgnored("P001", "tests/Aibysitter.Rules.Tests/SecretsInRulesFileTests.cs"));
         Assert.True(config.IsIgnored("P001", "src/Aibysitter.Rules/PullRequests/PullRequestCheckDocs.cs"));
         Assert.False(config.IsIgnored("P005", "src/Aibysitter.Web/Program.cs"));
+        Assert.True(config.IsIgnored("P006", "tests/Aibysitter.Rules.Tests/PullRequests/C1ChecksTests.cs"));
+        Assert.True(config.IsIgnored("P006", "src/Aibysitter.Rules/PullRequests/SkippedTests.cs"));
+        Assert.False(config.IsIgnored("P006", "src/Aibysitter.Rules/PullRequests/SecurityExemptions.cs"));
         Assert.Contains("`.github/aibysitter.json` ignores the check docs", File.ReadAllText(Path.Combine(NodeRunner.RepoRoot, "CONTRIBUTING.md")), StringComparison.Ordinal);
     }
 

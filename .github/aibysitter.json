@@ -5,6 +5,7 @@
     "src/Aibysitter.Rules/RuleDocs.cs",
     "src/Aibysitter.Rules/RulesetChangelog.cs",
     { "paths": ["tests/**"], "checks": ["P005"] },
+    { "paths": ["tests/**", "src/Aibysitter.Rules/PullRequests/SkippedTests.cs"], "checks": ["P006"] },
     { "paths": ["src/Aibysitter.Rules/PullRequests/PlaceholderIdentifiers.cs"], "checks": ["P001"] }
   ]
 }
