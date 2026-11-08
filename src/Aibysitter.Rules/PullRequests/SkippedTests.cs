@@ -17,7 +17,8 @@ public sealed partial class SkippedTests : AddedLinePatternCheck
     /// <summary>
     /// xUnit Skip =, NUnit / MSTest [Ignore], JS it/test/describe.skip and xit / xtest / xdescribe,
     /// pytest / unittest skip, Go t.Skip, Rust #[ignore], JUnit @Disabled / @Ignore.
+    /// it/test/describe.skip( only with no argument, a string title or true: Playwright's test.skip(condition, …) is conditional.
     /// </summary>
-    [GeneratedRegex(@"\[\s*(?:Fact|Theory)\s*\(\s*Skip\s*=|\[\s*(?:[\w.]+(?:\([^()]*\))?\s*,\s*)*Ignore\s*[(\]]|\b(?:it|test|describe)\.skip\s*\(|\bx(?:it|test|describe)\s*\(|@pytest\.mark\.skip\b(?!if)|\bpytest\.skip\s*\(|@unittest\.skip\b(?!If|Unless)|\bt\.Skip(?:f|Now)?\s*\(|#\[\s*ignore\b|@(?:Disabled|Ignore)\b")]
+    [GeneratedRegex(@"\[\s*(?:Fact|Theory)\s*\(\s*Skip\s*=|\[\s*(?:[\w.]+(?:\([^()]*\))?\s*,\s*)*Ignore\s*[(\]]|\b(?:it|test|describe)\.skip\s*\(\s*(?:\)|['""`]|true\b)|\bx(?:it|test|describe)\s*\(|@pytest\.mark\.skip\b(?!if)|\bpytest\.skip\s*\(|@unittest\.skip\b(?!If|Unless)|\bt\.Skip(?:f|Now)?\s*\(|#\[\s*ignore\b|@(?:Disabled|Ignore)\b")]
     private static partial Regex SkipRegex();
 }

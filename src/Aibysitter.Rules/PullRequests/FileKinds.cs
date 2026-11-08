@@ -27,6 +27,10 @@ public static partial class FileKinds
     /// </summary>
     public static bool IsTestFile(string path) => IsCode(path) && TestPathRegex().IsMatch(path.Replace('\\', '/'));
 
-    [GeneratedRegex(@"(?:^|/)(?:tests?|__tests__|specs?)/|(?-i:(?:^|/)[^/]*Tests?\.[^/.]+$)|\.(?:test|spec)\.[^/.]+$|(?:^|/)test_[^/]*\.py$|_test\.(?:py|go)$|_spec\.rb$", RegexOptions.IgnoreCase)]
+    /// <summary>
+    /// A tests / test / __tests__ / spec(s) folder, a .NET test project folder (Foo.Tests/, Foo.UnitTests/, case-sensitive), a
+    /// *Test(s).ext file name (case-sensitive), *.test.* / *.spec.*, Python test_*.py / *_test.py, Go *_test.go, Ruby *_spec.rb.
+    /// </summary>
+    [GeneratedRegex(@"(?:^|/)(?:tests?|__tests__|specs?)/|(?-i:(?:^|/)[^/]+\.(?:[A-Z][A-Za-z]*)?Tests?/)|(?-i:(?:^|/)[^/]*Tests?\.[^/.]+$)|\.(?:test|spec)\.[^/.]+$|(?:^|/)test_[^/]*\.py$|_test\.(?:py|go)$|_spec\.rb$", RegexOptions.IgnoreCase)]
     private static partial Regex TestPathRegex();
 }

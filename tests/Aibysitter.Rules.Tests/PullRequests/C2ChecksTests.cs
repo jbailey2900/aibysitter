@@ -16,6 +16,9 @@ public class FileKindsTestFileTests
     [InlineData("pkg/order_test.py")]
     [InlineData("order_test.go")]
     [InlineData("spec/order_spec.rb")]
+    [InlineData("TwoGoOut.Tests/Browser/BrowserFixture.cs")]
+    [InlineData("src/Orders.UnitTests/Fakes/FakeClock.cs")]
+    [InlineData("Orders.IntegrationTest/Setup.cs")]
     public void IsTestFile(string path) => Assert.True(FileKinds.IsTestFile(path));
 
     [Theory]
@@ -24,6 +27,9 @@ public class FileKindsTestFileTests
     [InlineData("tests/fixtures/data.json")]
     [InlineData("src/latest.ts")]
     [InlineData("src/contest.py")]
+    [InlineData("src/Orders.Latest/OrderService.cs")]
+    [InlineData("src/Orders.tests/OrderService.cs")]
+    [InlineData("Contests/Entry.cs")]
     public void IsNotTestFile(string path) => Assert.False(FileKinds.IsTestFile(path));
 }
 

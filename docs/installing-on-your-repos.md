@@ -152,7 +152,7 @@ A new PackageReference gets a P010 Warning. When the package is approved, add an
 
 - `name`: the package ID, exact, case-insensitive.
 - `version`: exact (`10.0.0`, also `[10.0.0]`) or a NuGet range (`[a,b]`, `[a,b)`, `(a,b]`, `(a,b)`, `[a,)`, `(,b]`). A bare version is exact here, not a minimum.
-- `reason`: required; shown in the finding.
+- `reason`: required; say what the package is for and where it is first used. Shown in the finding.
 - The finding drops to Info, `Approved dependency: <name> (<reason>)`, when the reference's version is in the entry: `VersionOverride` or `Version` on the PackageReference, or a PackageVersion added in the same pull request.
 - A name match with the version outside the entry, or no version in the pull request (a PackageVersion already on the base branch, a floating version), leaves the Warning; the summary says why.
 - An entry with no version or no reason is a config error, listed in the summary.
