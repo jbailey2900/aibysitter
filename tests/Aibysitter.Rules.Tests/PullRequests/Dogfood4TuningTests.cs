@@ -249,4 +249,20 @@ public class Dogfood4TuningTests
     [Fact]
     public void P010_NonCentralReferenceWithVersion_Warning() =>
         Assert.Null(Assert.Single(Run(new NewDependencies(), Modified("src/Web/Web.csproj", "@@ -10,1 +10,2 @@\n <ItemGroup>\n+  <PackageReference Include=\"Polly\" Version=\"8.4.0\" />"))).Severity);
+
+    // Dogfood 5: a .NET test project folder is test code (P018 on a Playwright stub, P008 on a deleted fixture).
+
+    [Fact]
+    public void P018_TestProjectFolder_NotFlagged() =>
+        Assert.Empty(Run(new BrowserPolicyLoosened(), Modified("TwoGoOut.Tests/Browser/BrowserFixture.cs",
+            "@@ -120,1 +120,2 @@\n             var headers = new Dictionary<string, string>();\n+            headers[\"Access-Control-Allow-Origin\"] = \"*\";")));
+
+    [Fact]
+    public void P018_SameLineInApp_Flagged() =>
+        Assert.Single(Run(new BrowserPolicyLoosened(), Modified("TwoGoOut.Web/Program.cs",
+            "@@ -120,1 +120,2 @@\n             var headers = new Dictionary<string, string>();\n+            headers[\"Access-Control-Allow-Origin\"] = \"*\";")));
+
+    [Fact]
+    public void P008_DeletedFixtureInTestProjectFolder_Flagged() =>
+        Assert.Single(Run(new DeletedTests(), new ChangedFile("Orders.Tests/Helpers/Fixture.cs", FileChangeStatus.Removed, "@@ -1 +0,0 @@\n-x")));
 }
